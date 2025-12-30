@@ -69,6 +69,10 @@ fuzzy_mode = col7.checkbox("伏字モード", value=False)
 
 custom_rule = st.text_input("その他ルール")
 
+st.subheader("画像プロンプト生成")
+generate_image_prompt = st.checkbox("ツイート連動画像プロンプトを作成", value=True)
+image_prompt_lang = st.selectbox("プロンプト言語", ["English", "Japanese"], index=0)
+
 if st.button("生成開始"):
     if not features or not API_KEY:
         st.error("特徴とAPIキーを入力してください")
@@ -114,6 +118,7 @@ if st.button("生成開始"):
             dates.reverse()  # 今日から古い順
             date_strings = []
             tweets = []
+            image_prompts = []  # 新規: 画像プロンプト列
 
             for date in dates:
                 date_str = date.strftime("%Y-%m-%d")
@@ -135,7 +140,7 @@ if st.button("生成開始"):
                     data = {
                         "model": model_name,
                         "messages": [{"role": "user", "content": prompt}],
-                        "temperature": 1.1,  # 重複防止のため最大限に上げ
+                        "temperature": 1.1,
                         "max_tokens": 350
                     }
                     response = requests.post(API_URL, headers=headers, json=data)
@@ -146,7 +151,30 @@ if st.button("生成開始"):
                     tweets.append(tweet)
                     date_strings.append(f"{date_str} ({time_label})")
 
-            df = pd.DataFrame({"Date": date_strings, "Tweet": tweets})
+                    # 画像プロンプト生成（チェックオン時のみ）
+                    image_prompt = ""
+                    if generate_image_prompt:
+                        image_prompt_lang_text = "English" if image_prompt_lang == "English" else "Japanese"
+                        image_prompt_prompt = f"""
+                        このツイート '{tweet}' に連動したX投稿用画像の詳細なプロンプトを作成。
+                        - リアルスタイル
+                        - Twitterセンシティブに引っかからない程度のエロさ（暗示的、服着用、雰囲気重視）
+                        - 言語: {image_prompt_lang_text}
+                        - 必ず含む: 日本人女性、年齢（{features}から推定）、胸の大きさ（{features}から推定）
+                        - 出力: プロンプト本文のみ
+                        """
+                        data_image = {
+                            "model": model_name,
+                            "messages": [{"role": "user", "content": image_prompt_prompt}],
+                            "temperature": 0.8,
+                            "max_tokens": 200
+                        }
+                        response_image = requests.post(API_URL, headers=headers, json=data_image)
+                        if response_image.status_code == 200:
+                            image_prompt = response_image.json()["choices"][0]["message"]["content"].strip()
+                    image_prompts.append(image_prompt)
+
+            df = pd.DataFrame({"Date": date_strings, "Tweet": tweets, "Image Prompt": image_prompts})
             csv = df.to_csv(index=False).encode('utf-8')
             st.download_button("CSVダウンロード", csv, "tweets.csv", "text/csv")
             st.dataframe(df)
