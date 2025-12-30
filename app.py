@@ -161,20 +161,29 @@ if st.button("生成開始"):
         rule_text += custom_rule
 
         # エロ度指示
-        if erotic_level <= 3:
-            erotic_instruction = "エロティックさは控えめで、直接的な表現を避け、雰囲気や暗示で表現。"
-        elif erotic_level <= 7:
-            erotic_instruction = "中程度のエロティック表現を使用。感覚的な描写を適度に取り入れる。"
-        else:
-            erotic_instruction = "生々しく大胆なエロティック表現を積極的に使用。具体的な描写も可。"
+# エロ度指示（10段階細分化版）
+if erotic_level <= 2:
+    erotic_instruction = "エロティックさは極めて控えめ。性的表現は一切避け、孤独感や雰囲気の描写のみ。"
+elif erotic_level <= 4:
+    erotic_instruction = "エロティックさは軽い暗示レベル。体が熱くなる、ドキドキするなどの間接表現のみ。"
+elif erotic_level <= 6:
+    erotic_instruction = "中程度のエロティック表現。疼き、濡れそうな感覚、触れたい衝動などの感覚描写を適度に取り入れる。"
+elif erotic_level <= 8:
+    erotic_instruction = "やや大胆なエロティック表現。指の動き、息遣い、具体的な部位の熱さなどの描写を積極的に。"
+else:  # 9-10
+    erotic_instruction = "生々しく大胆なエロティック表現。具体的な感覚描写や行為の想像を強く含むが、センシティブ回避ルールを厳守。"
 
-        # ツイート長指示
-        if tweet_length <= 3:
-            length_instruction = "ツイートは短め（100文字以内）で簡潔に。"
+# ツイート長指示（修正版）
+        if tweet_length <= 2:
+            length_instruction = "ツイートは極短（80〜120文字、約2行）で簡潔に。"
+        elif tweet_length <= 4:
+            length_instruction = "ツイートは短め（120〜160文字、約3〜4行）。"
         elif tweet_length <= 7:
-            length_instruction = "ツイートは中程度の長さ（150〜200文字程度）。"
+            length_instruction = "ツイートは中程度の長さ（160〜200文字、約5〜6行）。"
+        elif tweet_length <= 9:
+            length_instruction = "ツイートは長め（200〜240文字、約7〜8行）で詳細に描写。"
         else:
-            length_instruction = "ツイートは長め（220〜280文字）で詳細に描写。"
+            length_instruction = "ツイートは最大限長め（240〜280文字、約8〜10行）で詳細に描写。"
 
         # 重複禁止 + 奥行き強化指示（大幅強化）
         variety_instruction = """
