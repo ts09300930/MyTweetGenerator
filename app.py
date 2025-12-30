@@ -30,24 +30,13 @@ features = st.text_area(
     height=150
 )
 
-# 参考スタイルをデフォルトで常時入力（分析に基づく説明文）
-default_reference = """
-参考アカウントのスタイルを模倣（内容はパクリせず、フォーマット・書き方のみ参考）:
-@NextMrsGerrard: 初老のおじさん募集、寂しさ強調、改行多用、誘導文。
-@cpc6MkXOxY54448: 大胆な募集、短文、便器・トイレなどの表現。
-@sx14e: 家出少女設定、助けを求める口調、なんでもします誘導。
-@siznp82913: 台湾人設定、外国人アピール、迷惑かけない強調。
-@nico_chan714: 貧乳コンプレックス、自己卑下、小さいけどいいですか？口調。
-全体: 改行で読みやすく、寂しさ・欲求・連絡誘導を自然に。伏字や暗示表現を適宜。
-"""
-
 reference = st.text_area(
     "参考スタイル（オプション）\nXアカウントURLや過去ツイート例を貼り付け",
-    value=default_reference,  # ここでデフォルト値を常時設定
-    height=300
+    height=150
 )
 
 days = st.slider("生成日数", 1, 60, 30)
+tweets_per_day = st.slider("1日あたりのツイート数", 1, 5, 2)  # 新規：1日2ツイート対応
 
 st.subheader("エロ度調整")
 erotic_level = st.slider("エロ度（1: 控えめ → 10: 生々しい）", min_value=1, max_value=10, value=5)
@@ -98,42 +87,47 @@ if st.button("生成開始"):
             length_instruction = "ツイートは長め（220〜280文字）で詳細に描写。"
 
         # 重複禁止指示
-        repeat_prevention = "30日分のツイートすべてで表現・シチュエーション・言い回しを多様化し、同じような内容やフレーズの繰り返しを厳禁とする。"
+        repeat_prevention = "すべてのツイートで表現・シチュエーション・言い回しを多様化し、同じような内容やフレーズの繰り返しを厳禁とする。"
 
         reference_prompt = f"参考スタイル: {reference}" if reference else ""
 
-        with st.spinner(f"{days}日分生成中..."):
+        with st.spinner(f"{days}日分（{days * tweets_per_day}ツイート）生成中..."):
             today = datetime.date.today()
-            dates = [today - datetime.timedelta(days=i) for i in range(days-1, -1, -1)]
-            date_strings = [d.strftime("%Y-%m-%d") for d in dates]
+            dates = [today - datetime.timedelta(days=i) for i in range(days)]  # 今日から遡る（今日含む）
+            dates.reverse()  # 最新日（今日）から古い順
+            date_strings = []
             tweets = []
 
-            for date in date_strings:
-                prompt = f"""
-                厳格に以下の指示で裏垢女子のツイートを1つ生成。
-                - 特徴: {features}
-                {reference_prompt}
-                - 日付考慮: {date}頃
-                - ルール: {rule_text}
-                - エロ度: {erotic_instruction}
-                - 長さ: {length_instruction}
-                - 重複禁止: {repeat_prevention}
-                - 280文字以内、フィクション、秘密めいた内容
-                - 出力: ツイート本文のみ
-                """
-                headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
-                data = {
-                    "model": model_name,
-                    "messages": [{"role": "user", "content": prompt}],
-                    "temperature": 0.95,
-                    "max_tokens": 350
-                }
-                response = requests.post(API_URL, headers=headers, json=data)
-                if response.status_code == 200:
-                    tweet = response.json()["choices"][0]["message"]["content"].strip()
-                else:
-                    tweet = f"エラー: {response.text[:100]}"
-                tweets.append(tweet)
+            for date in dates:
+                date_str = date.strftime("%Y-%m-%d")
+                for j in range(tweets_per_day):  # 1日あたりのツイート数分ループ
+                    time_label = f"投稿{j+1}"  # 例: 投稿1, 投稿2
+                    prompt = f"""
+                    厳格に以下の指示で裏垢女子のツイートを1つ生成。
+                    - 特徴: {features}
+                    {reference_prompt}
+                    - 日付考慮: {date_str}頃（{time_label}）
+                    - ルール: {rule_text}
+                    - エロ度: {erotic_instruction}
+                    - 長さ: {length_instruction}
+                    - 重複禁止: {repeat_prevention}
+                    - 280文字以内、フィクション、秘密めいた内容
+                    - 出力: ツイート本文のみ
+                    """
+                    headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
+                    data = {
+                        "model": model_name,
+                        "messages": [{"role": "user", "content": prompt}],
+                        "temperature": 0.95,
+                        "max_tokens": 350
+                    }
+                    response = requests.post(API_URL, headers=headers, json=data)
+                    if response.status_code == 200:
+                        tweet = response.json()["choices"][0]["message"]["content"].strip()
+                    else:
+                        tweet = f"エラー: {response.text[:100]}"
+                    tweets.append(tweet)
+                    date_strings.append(f"{date_str} ({time_label})")
 
             df = pd.DataFrame({"Date": date_strings, "Tweet": tweets})
             csv = df.to_csv(index=False).encode('utf-8')
