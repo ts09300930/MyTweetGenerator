@@ -67,10 +67,8 @@ if uploaded_csv is not None:
             generate_image_prompt = bool(row["Generate Image Prompt"])
             image_prompt_lang = row["Image Prompt Lang"]
             mask_on = bool(row["Mask On"])
-            mirror_selfie_mode = row.get("Mirror Selfie Mode", "顔が映る・スマホ映り込み")
             custom_rule = row.get("Custom Rule", "")
-            image_custom_prompt = row.get("Image Custom Prompt", "")
-            st.success(f"{selected_char}の設定を復元しました")
+            st.success(f"{selected_char}の設定を読み込みました")
     except Exception as e:
         st.error(f"CSV読み込みエラー: {e}")
 else:
@@ -82,35 +80,27 @@ reference = st.text_area("参考スタイル（オプション）\nXアカウン
 days = st.slider("生成日数", 1, 60, days if 'days' in locals() else 30)
 tweets_per_day = st.slider("1日あたりのツイート数", 1, 5, tweets_per_day if 'tweets_per_day' in locals() else 2)
 erotic_level = st.slider("エロ度（1: 控えめ → 10: 生々しい）", 1, 10, erotic_level if 'erotic_level' in locals() else 5)
-tweet_length = st.slider("ツイート長（1: 2行程度 → 10: 8〜10行）", 1, 10, tweet_length if 'tweet_length' in locals() else 6)
+tweet_length = st.slider("ツイート長（1: 短め → 10: 長め）", 1, 10, tweet_length if 'tweet_length' in locals() else 6)
 question_frequency = st.slider("質問形式頻度（1: 稀 → 10: 多め）", 1, 10, question_frequency if 'question_frequency' in locals() else 4)
 self_deprecation_level = st.slider("自己卑下度（1: 控えめ → 10: 強い）", 1, 10, self_deprecation_level if 'self_deprecation_level' in locals() else 5)
 recruit_type = st.selectbox("募集タイプを選択", ["なし", "おじさん限定", "家出少女", "便器志願", "外国人アピール", "貧乳コンプ", "カスタム"], index=["なし", "おじさん限定", "家出少女", "便器志願", "外国人アピール", "貧乳コンプ", "カスタム"].index(recruit_type) if 'recruit_type' in locals() else 0)
 custom_recruit = st.text_input("カスタム募集タイプを入力", value=custom_recruit if 'custom_recruit' in locals() else "") if recruit_type == "カスタム" else ""
-# 生成ルール（2行配置で縦長改善）
-st.subheader("生成ルール")
-row1 = st.columns(5)
-row2 = st.columns(5)
-emoji_ban = row1[0].checkbox("絵文字禁止", value=emoji_ban if 'emoji_ban' in locals() else True)
-hashtag_ban = row1[1].checkbox("ハッシュタグ禁止", value=hashtag_ban if 'hashtag_ban' in locals() else True)
-newline_allow = row1[2].checkbox("改行を適切に使用", value=newline_allow if 'newline_allow' in locals() else True)
-newline_ban = row1[3].checkbox("改行完全禁止", value=newline_ban if 'newline_ban' in locals() else False)
-dm_invite = row1[4].checkbox("連絡誘導を入れる", value=dm_invite if 'dm_invite' in locals() else False)
-sensitive_avoid = row2[0].checkbox("センシティブ回避（暗示表現）", value=sensitive_avoid if 'sensitive_avoid' in locals() else True)
-fuzzy_mode = row2[1].checkbox("伏字モード", value=fuzzy_mode if 'fuzzy_mode' in locals() else False)
-ellipsis_end = row2[2].checkbox("末尾に。。や...を入れる", value=ellipsis_end if 'ellipsis_end' in locals() else True)
-dom_s_mode = row2[3].checkbox("ドSモード", value=dom_s_mode if 'dom_s_mode' in locals() else False)
-mirror_selfie_mode = row2[4].radio("鏡自撮りモード", ["オフ", "顔が映る・スマホ映り込み", "顔が映る・スマホ映らない", "顔が映らない・スマホ映らない"], index=["オフ", "顔が映る・スマホ映り込み", "顔が映る・スマホ映らない", "顔が映らない・スマホ映らない"].index(mirror_selfie_mode) if 'mirror_selfie_mode' in locals() else 1)
-
+col1, col2, col3, col4, col5, col6, col7, col8, col9 = st.columns(9)
+emoji_ban = col1.checkbox("絵文字禁止", value=emoji_ban if 'emoji_ban' in locals() else True)
+hashtag_ban = col2.checkbox("ハッシュタグ禁止", value=hashtag_ban if 'hashtag_ban' in locals() else True)
+newline_allow = col3.checkbox("改行を適切に使用", value=newline_allow if 'newline_allow' in locals() else True)
+newline_ban = col4.checkbox("改行完全禁止", value=newline_ban if 'newline_ban' in locals() else False)
+dm_invite = col5.checkbox("連絡誘導を入れる", value=dm_invite if 'dm_invite' in locals() else False)
+sensitive_avoid = col6.checkbox("センシティブ回避（暗示表現）", value=sensitive_avoid if 'sensitive_avoid' in locals() else True)
+fuzzy_mode = col7.checkbox("伏字モード", value=fuzzy_mode if 'fuzzy_mode' in locals() else False)
+ellipsis_end = col8.checkbox("末尾に。。や...を入れる", value=ellipsis_end if 'ellipsis_end' in locals() else True)
+dom_s_mode = col9.checkbox("ドSモード", value=dom_s_mode if 'dom_s_mode' in locals() else False)
 generate_image_prompt = st.checkbox("ツイート連動画像プロンプトを作成", value=generate_image_prompt if 'generate_image_prompt' in locals() else True)
 image_prompt_lang = st.selectbox("プロンプト言語", ["English", "Japanese"], index=0 if ('image_prompt_lang' in locals() and image_prompt_lang == "English") else 1)
 mask_on = st.checkbox("白いマスク着用を追加", value=mask_on if 'mask_on' in locals() else True)
+custom_rule = st.text_input("その他ルール", value=custom_rule if 'custom_rule' in locals() else "")
 
-# ツイートと画像のルールを分離
-custom_rule = st.text_input("ツイートその他ルール（ツイート本文向け）", value=custom_rule if 'custom_rule' in locals() else "")
-image_custom_prompt = st.text_input("画像プロンプト追加指示（画像向け）", value=image_custom_prompt if 'image_custom_prompt' in locals() else "", placeholder="例: 夜の部屋背景、上半身のみ、笑顔、薄暗い照明")
-
-# キャラ設定CSV保存機能（追記対応 + 新規項目追加）
+# キャラ設定CSV保存機能（追記対応）
 st.subheader("キャラ設定保存")
 char_name_save = st.text_input("保存するキャラ名（新規または既存）")
 if st.button("現在の設定をCSVに追加保存"):
@@ -139,9 +129,7 @@ if st.button("現在の設定をCSVに追加保存"):
             "Generate Image Prompt": [generate_image_prompt],
             "Image Prompt Lang": [image_prompt_lang],
             "Mask On": [mask_on],
-            "Mirror Selfie Mode": [mirror_selfie_mode],
-            "Custom Rule": [custom_rule],
-            "Image Custom Prompt": [image_custom_prompt]  # 新規追加
+            "Custom Rule": [custom_rule]
         }
         df_new = pd.DataFrame(new_data)
         csv_new = df_new.to_csv(index=False).encode('utf-8')
@@ -172,33 +160,85 @@ if st.button("生成開始"):
         if dom_s_mode: rule_text += "ドSな口調で上から目線・言葉責め・煽りを積極的に使用（例: 「おじさんならどうするの？」「満足させられる人だけ来て」など）。"
         rule_text += custom_rule
 
-        # ... (エロ度、ツイート長、重複禁止などの指示は変更なし)
+        # エロ度指示
+        if erotic_level <= 3:
+            erotic_instruction = "エロティックさは控えめで、直接的な表現を避け、雰囲気や暗示で表現。"
+        elif erotic_level <= 6:
+            erotic_instruction = "中程度のエロティック表現を使用。感覚的な描写を適度に取り入れる。"
+        else:
+            erotic_instruction = "生々しく大胆なエロティック表現を積極的に使用。具体的な描写も可。"
 
-        # 画像プロンプト生成（画像専用指示追加）
-        image_prompt = ""
-        if generate_image_prompt:
-            image_prompt_lang_text = "English" if image_prompt_lang == "English" else "Japanese"
-            mask_text = "wearing a white surgical face mask covering nose and mouth," if mask_on else ""
-            if mirror_selfie_mode == "顔が映る・スマホ映り込み":
-                mirror_text = "taking a mirror selfie in front of a mirror, holding iPhone smartphone with one hand, full body or upper body visible in reflection,"
-            elif mirror_selfie_mode == "顔が映る・スマホ映らない":
-                mirror_text = "mirror selfie in front of a mirror, face visible but smartphone not in frame, like taken from outside, realistic composition,"
-            elif mirror_selfie_mode == "顔が映らない・スマホ映らない":
-                mirror_text = "mirror selfie in front of a mirror, face hidden or cropped, body visible, smartphone not in frame, anonymous style,"
-            else:
-                mirror_text = ""
-            photo_style = "photorealistic, high resolution photo, natural indoor lighting, candid selfie style like taken with smartphone camera, realistic skin texture, detailed eyes and hair, style inspired by @BeaulieuEv74781's self-photos but original composition"
-            image_prompt_prompt = f"""
-            このツイート '{tweet}' に連動したX投稿用画像の詳細なプロンプトを作成。
-            - スタイル: {photo_style}
-            - Twitterセンシティブに引っかからない程度のエロさ（暗示的、服着用、雰囲気重視）
-            - 言語: {image_prompt_lang_text}
-            - 必ず含む: Japanese woman, age (estimated from {features}), breast size (estimated from {features}), {mask_text}{mirror_text}
-            - 追加指示: {image_custom_prompt}
-            - 出力: プロンプト本文のみ
-            """
-            # ... (API呼び出しは変更なし)
+        # ツイート長指示
+        if tweet_length <= 3:
+            length_instruction = "ツイートは短め（100文字以内）で簡潔に。"
+        elif tweet_length <= 6:
+            length_instruction = "ツイートは中程度の長さ（150〜200文字程度）。"
+        else:
+            length_instruction = "ツイートは長め（220〜280文字）で詳細に描写。"
 
-# ... (生成ループ以降は変更なし)
+        # 重複禁止指示（強化版）
+        repeat_prevention = "すべてのツイートで表現、シチュエーション、言い回しを多様化し、同じような内容やフレーズの繰り返しを厳禁とする。"
+
+        reference_prompt = f"参考スタイル: {reference}" if reference else ""
+
+        with st.spinner(f"{days}日分（{days * tweets_per_day}ツイート）生成中..."):
+            today = datetime.date.today()
+            dates = [today - datetime.timedelta(days=i) for i in range(days-1, -1, -1)]
+            date_strings = [d.strftime("%Y-%m-%d") for d in dates]
+            tweets = []
+            image_prompts = []
+            for i, date in enumerate(date_strings):
+                prompt = f"""
+                以下の指示で裏垢女子のツイートを1つ生成。
+                - 特徴: {features}
+                {reference_prompt}
+                - 日付考慮: {date}頃の日常
+                - ルール: {rule_text}
+                - 280文字以内、フィクション、エロティックで秘密めいた内容
+                - 出力: ツイート本文のみ
+                """
+                headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
+                data = {
+                    "model": model_name,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": 0.9,
+                    "max_tokens": 300
+                }
+                response = requests.post(API_URL, headers=headers, json=data)
+                if response.status_code == 200:
+                    tweet = response.json()["choices"][0]["message"]["content"].strip()
+                else:
+                    tweet = f"エラー: {response.text[:100]}"
+                tweets.append(tweet)
+
+                # 画像プロンプト生成（ツイート生成後に移動してtweetを使用可能に）
+                image_prompt = ""
+                if generate_image_prompt:
+                    image_prompt_lang_text = "English" if image_prompt_lang == "English" else "Japanese"
+                    mask_text = "wearing a white surgical face mask covering nose and mouth," if mask_on else ""
+                    photo_style = "photorealistic, high resolution photo, natural indoor lighting, candid selfie style like taken with smartphone camera, realistic skin texture, detailed eyes and hair"
+                    image_prompt_prompt = f"""
+                    このツイート '{tweet}' に連動したX投稿用画像の詳細なプロンプトを作成。
+                    - スタイル: {photo_style}
+                    - Twitterセンシティブに引っかからない程度のエロさ（暗示的、服着用、雰囲気重視）
+                    - 言語: {image_prompt_lang_text}
+                    - 必ず含む: Japanese woman, age (estimated from {features}), breast size (estimated from {features}), {mask_text}
+                    - 出力: プロンプト本文のみ
+                    """
+                    data_image = {
+                        "model": model_name,
+                        "messages": [{"role": "user", "content": image_prompt_prompt}],
+                        "temperature": 0.8,
+                        "max_tokens": 200
+                    }
+                    response_image = requests.post(API_URL, headers=headers, json=data_image)
+                    if response_image.status_code == 200:
+                        image_prompt = response_image.json()["choices"][0]["message"]["content"].strip()
+                image_prompts.append(image_prompt)
+
+            df = pd.DataFrame({"Date": date_strings, "Tweet": tweets, "Image Prompt": image_prompts})
+            csv = df.to_csv(index=False).encode('utf-8')
+            st.download_button("CSVダウンロード", csv, "tweets.csv", "text/csv")
+            st.dataframe(df)
 
 st.info("生成時のみクレジット消費。初回は数円程度です。")
