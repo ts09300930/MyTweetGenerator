@@ -80,42 +80,33 @@ features = st.text_area("裏垢女子の特徴を入力", value=features if 'fea
 reference = st.text_area("参考スタイル（オプション）\nXアカウントURLや過去ツイート例を貼り付け", value=reference if 'reference' in locals() else default_reference, height=300)
 days = st.slider("生成日数", 1, 60, days if 'days' in locals() else 30)
 tweets_per_day = st.slider("1日あたりのツイート数", 1, 5, tweets_per_day if 'tweets_per_day' in locals() else 2)
-
-st.subheader("エロ度調整")
 erotic_level = st.slider("エロ度（1: 控えめ → 10: 生々しい）", 1, 10, erotic_level if 'erotic_level' in locals() else 5)
-
-st.subheader("ツイート長調整")
 tweet_length = st.slider("ツイート長（1: 2行程度 → 10: 8〜10行）", 1, 10, tweet_length if 'tweet_length' in locals() else 6)
-
-st.subheader("質問形式頻度（エンゲージメント向上）")
-question_frequency = st.slider("質問形式ツイート頻度（1: 稀 → 10: 多め）", 1, 10, question_frequency if 'question_frequency' in locals() else 4)
-
-st.subheader("自己卑下度（コンプレックス強調）")
+question_frequency = st.slider("質問形式頻度（1: 稀 → 10: 多め）", 1, 10, question_frequency if 'question_frequency' in locals() else 4)
 self_deprecation_level = st.slider("自己卑下度（1: 控えめ → 10: 強い）", 1, 10, self_deprecation_level if 'self_deprecation_level' in locals() else 5)
-
-st.subheader("募集タイププリセット")
 recruit_type = st.selectbox("募集タイプを選択", ["なし", "おじさん限定", "家出少女", "便器志願", "外国人アピール", "貧乳コンプ", "カスタム"], index=["なし", "おじさん限定", "家出少女", "便器志願", "外国人アピール", "貧乳コンプ", "カスタム"].index(recruit_type) if 'recruit_type' in locals() else 0)
 custom_recruit = st.text_input("カスタム募集タイプを入力", value=custom_recruit if 'custom_recruit' in locals() else "") if recruit_type == "カスタム" else ""
-
+# 生成ルール（2行配置で縦長改善）
 st.subheader("生成ルール")
-col1, col2, col3, col4, col5, col6, col7, col8, col9, col10 = st.columns(10)
-emoji_ban = col1.checkbox("絵文字禁止", value=emoji_ban if 'emoji_ban' in locals() else True)
-hashtag_ban = col2.checkbox("ハッシュタグ禁止", value=hashtag_ban if 'hashtag_ban' in locals() else True)
-newline_allow = col3.checkbox("改行を適切に使用", value=newline_allow if 'newline_allow' in locals() else True)
-newline_ban = col4.checkbox("改行完全禁止", value=newline_ban if 'newline_ban' in locals() else False)
-dm_invite = col5.checkbox("連絡誘導を入れる", value=dm_invite if 'dm_invite' in locals() else False)
-sensitive_avoid = col6.checkbox("センシティブ回避（暗示表現）", value=sensitive_avoid if 'sensitive_avoid' in locals() else True)
-fuzzy_mode = col7.checkbox("伏字モード", value=fuzzy_mode if 'fuzzy_mode' in locals() else False)
-ellipsis_end = col8.checkbox("末尾に。。や...を入れる", value=ellipsis_end if 'ellipsis_end' in locals() else True)
-dom_s_mode = col9.checkbox("ドSモード", value=dom_s_mode if 'dom_s_mode' in locals() else False)
-mirror_selfie_mode = col10.radio("鏡自撮りモード", ["顔が映る・スマホ映り込み", "顔が映る・スマホ映らない", "顔が映らない・スマホ映らない"], index=["顔が映る・スマホ映り込み", "顔が映る・スマホ映らない", "顔が映らない・スマホ映らない"].index(mirror_selfie_mode) if 'mirror_selfie_mode' in locals() else 0)
+row1 = st.columns(5)
+row2 = st.columns(5)
+emoji_ban = row1[0].checkbox("絵文字禁止", value=emoji_ban if 'emoji_ban' in locals() else True)
+hashtag_ban = row1[1].checkbox("ハッシュタグ禁止", value=hashtag_ban if 'hashtag_ban' in locals() else True)
+newline_allow = row1[2].checkbox("改行を適切に使用", value=newline_allow if 'newline_allow' in locals() else True)
+newline_ban = row1[3].checkbox("改行完全禁止", value=newline_ban if 'newline_ban' in locals() else False)
+dm_invite = row1[4].checkbox("連絡誘導を入れる", value=dm_invite if 'dm_invite' in locals() else False)
+sensitive_avoid = row2[0].checkbox("センシティブ回避（暗示表現）", value=sensitive_avoid if 'sensitive_avoid' in locals() else True)
+fuzzy_mode = row2[1].checkbox("伏字モード", value=fuzzy_mode if 'fuzzy_mode' in locals() else False)
+ellipsis_end = row2[2].checkbox("末尾に。。や...を入れる", value=ellipsis_end if 'ellipsis_end' in locals() else True)
+dom_s_mode = row2[3].checkbox("ドSモード", value=dom_s_mode if 'dom_s_mode' in locals() else False)
+mirror_selfie_mode = row2[4].radio("鏡自撮りモード", ["オフ", "顔が映る・スマホ映り込み", "顔が映る・スマホ映らない", "顔が映らない・スマホ映らない"], index=["オフ", "顔が映る・スマホ映り込み", "顔が映る・スマホ映らない", "顔が映らない・スマホ映らない"].index(mirror_selfie_mode) if 'mirror_selfie_mode' in locals() else 1)
 
 generate_image_prompt = st.checkbox("ツイート連動画像プロンプトを作成", value=generate_image_prompt if 'generate_image_prompt' in locals() else True)
 image_prompt_lang = st.selectbox("プロンプト言語", ["English", "Japanese"], index=0 if ('image_prompt_lang' in locals() and image_prompt_lang == "English") else 1)
 mask_on = st.checkbox("白いマスク着用を追加", value=mask_on if 'mask_on' in locals() else True)
 custom_rule = st.text_input("その他ルール", value=custom_rule if 'custom_rule' in locals() else "")
 
-# キャラ設定CSV保存機能（追記対応 + 新規項目追加）
+# キャラ設定CSV保存機能（追記対応 + 鏡自撮りモード追加）
 st.subheader("キャラ設定保存")
 char_name_save = st.text_input("保存するキャラ名（新規または既存）")
 if st.button("現在の設定をCSVに追加保存"):
@@ -164,6 +155,7 @@ if st.button("生成開始"):
     if not features or not API_KEY:
         st.error("特徴とAPIキーを入力してください")
     else:
+        # rule_text構築
         rule_text = ""
         if emoji_ban: rule_text += "絵文字は一切使用禁止。"
         if hashtag_ban: rule_text += "ハッシュタグは一切使用禁止。"
@@ -203,8 +195,10 @@ if st.button("生成開始"):
         # 重複禁止 + 奥行き強化指示（強化版）
         variety_instruction = """
         すべてのツイートで内容、表現、シチュエーション、言い回し、感情描写を完全に多様化せよ。
-        同じフレーズ、似た状況、繰り返しの感覚描写を絶対に避け、毎日異なる出来事・感情・比喩を使用。
-        例: 「疼く」「熱になる」などの繰り返しを禁じ、毎回新しい感覚や出来事を導入。
+        毎日異なる具体的な日常イベント（例: 専門学校の授業、バイト先の出来事、通勤電車、コンビニ買い物、SNS閲覧、友人会話、テレビ視聴など）を1つ必ず入れ、それきっかけでムラムラする流れにする。
+        妄想シーンも毎日変え、おじさんとの出会い方（電車、コンビニ、夢の中、SNSリプ、街角など）、場所（部屋、ホテル、車内、公園など）、行為の詳細を毎回異なるものに。
+        感情の起伏も変え（期待、苛立ち、後悔、罪悪感、興奮、切なさなど日替わり）。
+        同じフレーズ・似た状況の繰り返しを絶対禁止。
         """
 
         # 質問形式頻度指示
@@ -291,8 +285,10 @@ if st.button("生成開始"):
                             mirror_text = "taking a mirror selfie in front of a mirror, holding iPhone smartphone with one hand, full body or upper body visible in reflection,"
                         elif mirror_selfie_mode == "顔が映る・スマホ映らない":
                             mirror_text = "mirror selfie in front of a mirror, face visible but smartphone not in frame, like taken from outside, realistic composition,"
-                        else:  # 顔が映らない・スマホ映らない
+                        elif mirror_selfie_mode == "顔が映らない・スマホ映らない":
                             mirror_text = "mirror selfie in front of a mirror, face hidden or cropped, body visible, smartphone not in frame, anonymous style,"
+                        else:  # オフ
+                            mirror_text = ""
                         photo_style = "photorealistic, high resolution photo, natural indoor lighting, candid selfie style like taken with smartphone camera, realistic skin texture, detailed eyes and hair, style inspired by @BeaulieuEv74781's self-photos but original composition"
                         image_prompt_prompt = f"""
                         このツイート '{tweet}' に連動したX投稿用画像の詳細なプロンプトを作成。
