@@ -67,7 +67,6 @@ if uploaded_csv is not None:
             generate_image_prompt = bool(row["Generate Image Prompt"])
             image_prompt_lang = row["Image Prompt Lang"]
             mask_on = bool(row["Mask On"])
-            mirror_selfie_mode = row.get("Mirror Selfie Mode", "顔が映る・スマホ映り込み")
             custom_rule = row.get("Custom Rule", "")
             image_custom_prompt = row.get("Image Custom Prompt", "")
             st.success(f"{selected_char}の設定を復元しました")
@@ -101,12 +100,15 @@ fuzzy_mode = row2[1].checkbox("伏字モード", value=fuzzy_mode if 'fuzzy_mode
 ellipsis_end = row2[2].checkbox("末尾に。。や...を入れる", value=ellipsis_end if 'ellipsis_end' in locals() else True)
 dom_s_mode = row2[3].checkbox("ドSモード", value=dom_s_mode if 'dom_s_mode' in locals() else False)
 mirror_selfie_mode = row2[4].radio("鏡自撮りモード", ["オフ", "顔が映る・スマホ映り込み", "顔が映る・スマホ映らない", "顔が映らない・スマホ映らない"], index=["オフ", "顔が映る・スマホ映り込み", "顔が映る・スマホ映らない", "顔が映らない・スマホ映らない"].index(mirror_selfie_mode) if 'mirror_selfie_mode' in locals() else 1)
+
 generate_image_prompt = st.checkbox("ツイート連動画像プロンプトを作成", value=generate_image_prompt if 'generate_image_prompt' in locals() else True)
 image_prompt_lang = st.selectbox("プロンプト言語", ["English", "Japanese"], index=0 if ('image_prompt_lang' in locals() and image_prompt_lang == "English") else 1)
 mask_on = st.checkbox("白いマスク着用を追加", value=mask_on if 'mask_on' in locals() else True)
+
 # ルールを分離
 custom_rule = st.text_input("ツイートその他ルール（ツイート本文向け）", value=custom_rule if 'custom_rule' in locals() else "")
 image_custom_prompt = st.text_input("画像プロンプト追加指示（画像向け）", value=image_custom_prompt if 'image_custom_prompt' in locals() else "", placeholder="例: 夜の部屋背景、上半身のみ、笑顔、薄暗い照明")
+
 # キャラ設定CSV保存機能（追記対応 + 新規項目追加）
 st.subheader("キャラ設定保存")
 char_name_save = st.text_input("保存するキャラ名（新規または既存）")
@@ -181,25 +183,25 @@ if st.button("生成開始"):
         else:
             erotic_instruction = "生々しく大胆なエロティック表現。具体的な感覚描写や行為の想像を強く含むが、センシティブ回避ルールを厳守。"
 
-# ツイート長指示（強化版：行数制限を明記）
-if tweet_length <= 2:
-    length_instruction = "ツイートは極短（80〜120文字、1〜2行のみ）で簡潔に。改行は1回以内に抑え、絶対に長くならないように。"
-elif tweet_length <= 4:
-    length_instruction = "ツイートは短め（120〜160文字、2〜4行以内）。改行は最小限に。"
-elif tweet_length <= 7:
-    length_instruction = "ツイートは中程度の長さ（160〜200文字、4〜6行以内）。"
-elif tweet_length <= 9:
-    length_instruction = "ツイートは長め（200〜240文字、6〜8行以内）で詳細に描写。"
-else:
-    length_instruction = "ツイートは最大限長め（240〜280文字、8〜10行以内）で詳細に描写。"
+        # ツイート長指示（1: 2行程度 → 10: 8〜10行）
+        if tweet_length <= 2:
+            length_instruction = "ツイートは極短（80〜120文字、約2行）で簡潔に。"
+        elif tweet_length <= 4:
+            length_instruction = "ツイートは短め（120〜160文字、約3〜4行）。"
+        elif tweet_length <= 7:
+            length_instruction = "ツイートは中程度の長さ（160〜200文字、約5〜6行）。"
+        elif tweet_length <= 9:
+            length_instruction = "ツイートは長め（200〜240文字、約7〜8行）で詳細に描写。"
+        else:
+            length_instruction = "ツイートは最大限長め（240〜280文字、約8〜10行）で詳細に描写。"
 
         # 重複禁止 + 奥行き強化指示（大幅強化版）
-    variety_instruction = """
-    すべてのツイートで内容、表現、シチュエーション、言い回し、感情描写を完全に多様化せよ。
-    毎日異なる具体的な日常イベント（例: 専門学校の授業、バイト先の出来事、通勤電車、コンビニ買い物、SNS閲覧、友人会話、テレビ視聴、散歩、料理など）を1つ必ず入れ、それきっかけでムラムラする流れにする。
-    妄想シーンも毎日変え、おじさんとの出会い方（電車、コンビニ、夢の中、SNSリプ、街角、カフェ、病院など）、場所（部屋、ホテル、車内、公園、屋上など）、行為の詳細を毎回異なるものに。
-    感情の起伏も変え（期待、苛立ち、後悔、罪悪感、興奮、切なさ、焦燥、陶酔など日替わり）。
-    同じフレーズ・似た状況の繰り返しを絶対禁止。
+        variety_instruction = """
+        すべてのツイートで内容、表現、シチュエーション、言い回し、感情描写を完全に多様化せよ。
+        毎日異なる具体的な日常イベント（例: 専門学校の授業、バイト先の出来事、通勤電車、コンビニ買い物、SNS閲覧、友人会話、テレビ視聴、散歩、料理など）を1つ必ず入れ、それきっかけでムラムラする流れにする。
+        妄想シーンも毎日変え、おじさんとの出会い方（電車、コンビニ、夢の中、SNSリプ、街角、カフェ、病院など）、場所（部屋、ホテル、車内、公園、屋上など）、行為の詳細を毎回異なるものに。
+        感情の起伏も変え（期待、苛立ち、後悔、罪悪感、興奮、切なさ、焦燥、陶酔など日替わり）。
+        同じフレーズ・似た状況の繰り返しを絶対禁止。
         """
 
         # 質問形式頻度指示
