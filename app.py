@@ -30,10 +30,21 @@ features = st.text_area(
     height=150
 )
 
+# 参考スタイルをデフォルトで常時入力（分析に基づく説明文）
+default_reference = """
+参考アカウントのスタイルを模倣（内容はパクリせず、フォーマット・書き方のみ参考）:
+@NextMrsGerrard: 初老のおじさん募集、寂しさ強調、改行多用、誘導文。
+@cpc6MkXOxY54448: 大胆な募集、短文、便器・トイレなどの表現。
+@sx14e: 家出少女設定、助けを求める口調、なんでもします誘導。
+@siznp82913: 台湾人設定、外国人アピール、迷惑かけない強調。
+@nico_chan714: 貧乳コンプレックス、自己卑下、小さいけどいいですか？口調。
+全体: 改行で読みやすく、寂しさ・欲求・連絡誘導を自然に。伏字や暗示表現を適宜。
+"""
+
 reference = st.text_area(
     "参考スタイル（オプション）\nXアカウントURLや過去ツイート例を貼り付け",
-    placeholder="例: 短文中心、特定の口癖を使う",
-    height=150
+    value=default_reference,  # ここでデフォルト値を常時設定
+    height=300
 )
 
 days = st.slider("生成日数", 1, 60, 30)
@@ -51,8 +62,8 @@ hashtag_ban = col2.checkbox("ハッシュタグ禁止", value=False)
 newline_allow = col3.checkbox("改行を適切に使用", value=True)
 newline_ban = col4.checkbox("改行完全禁止", value=False)
 dm_invite = col5.checkbox("連絡誘導を入れる", value=False)
-sensitive_avoid = col6.checkbox("センシティブ回避（暗示表現）", value=True)  # 新規1
-fuzzy_mode = col7.checkbox("伏字モード", value=False)  # 新規2
+sensitive_avoid = col6.checkbox("センシティブ回避（暗示表現）", value=True)
+fuzzy_mode = col7.checkbox("伏字モード", value=False)
 
 custom_rule = st.text_input("その他ルール")
 
