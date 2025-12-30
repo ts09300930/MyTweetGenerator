@@ -45,12 +45,14 @@ st.subheader("ツイート長調整")
 tweet_length = st.slider("ツイート長（1: 短め → 10: 長め）", min_value=1, max_value=10, value=6)
 
 st.subheader("生成ルール")
-col1, col2, col3, col4, col5 = st.columns(5)
+col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
 emoji_ban = col1.checkbox("絵文字禁止", value=False)
 hashtag_ban = col2.checkbox("ハッシュタグ禁止", value=False)
 newline_allow = col3.checkbox("改行を適切に使用", value=True)
 newline_ban = col4.checkbox("改行完全禁止", value=False)
-dm_invite = col5.checkbox("連絡誘導を入れる", value=False)  # 新規
+dm_invite = col5.checkbox("連絡誘導を入れる", value=False)
+sensitive_avoid = col6.checkbox("センシティブ回避（暗示表現）", value=True)  # 新規1
+fuzzy_mode = col7.checkbox("伏字モード", value=False)  # 新規2
 
 custom_rule = st.text_input("その他ルール")
 
@@ -64,6 +66,8 @@ if st.button("生成開始"):
         if newline_ban: rule_text += "改行は一切使用禁止。"
         if newline_allow: rule_text += "自然で読みやすい位置に適度な改行を挿入（2-4行程度）。"
         if dm_invite: rule_text += "ツイート末尾に自然な連絡誘導文を入れる（例: 「気になったら声かけてね」「リプください」「連絡待ってる」など。「DM」という単語は絶対に使わない）。"
+        if sensitive_avoid: rule_text += "Xのセンシティブ判定を回避するため、直接的な性器名・行為名は一切使わず、暗示的・比喩・感覚的な表現のみで描写（例: 「濡れる」→「熱が溢れる」「とろけそう」）。"
+        if fuzzy_mode: rule_text += "センシティブな言葉は伏字化（例: ま◯こ、ち◯ぽ、おっぱ◯）またはマイルド表現に置き換え。"
         rule_text += custom_rule
 
         # エロ度指示
@@ -82,7 +86,7 @@ if st.button("生成開始"):
         else:
             length_instruction = "ツイートは長め（220〜280文字）で詳細に描写。"
 
-        # 重複禁止指示（固定で追加）
+        # 重複禁止指示
         repeat_prevention = "30日分のツイートすべてで表現・シチュエーション・言い回しを多様化し、同じような内容やフレーズの繰り返しを厳禁とする。"
 
         reference_prompt = f"参考スタイル: {reference}" if reference else ""
@@ -110,7 +114,7 @@ if st.button("生成開始"):
                 data = {
                     "model": model_name,
                     "messages": [{"role": "user", "content": prompt}],
-                    "temperature": 0.95,  # 多様性を少し上げて重複防止強化
+                    "temperature": 0.95,
                     "max_tokens": 350
                 }
                 response = requests.post(API_URL, headers=headers, json=data)
