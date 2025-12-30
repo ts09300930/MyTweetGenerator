@@ -174,16 +174,16 @@ else:  # 9-10
     erotic_instruction = "生々しく大胆なエロティック表現。具体的な感覚描写や行為の想像を強く含むが、センシティブ回避ルールを厳守。"
 
 # ツイート長指示（修正版）
-        if tweet_length <= 2:
-            length_instruction = "ツイートは極短（80〜120文字、約2行）で簡潔に。"
-        elif tweet_length <= 4:
-            length_instruction = "ツイートは短め（120〜160文字、約3〜4行）。"
-        elif tweet_length <= 7:
-            length_instruction = "ツイートは中程度の長さ（160〜200文字、約5〜6行）。"
-        elif tweet_length <= 9:
-            length_instruction = "ツイートは長め（200〜240文字、約7〜8行）で詳細に描写。"
-        else:
-            length_instruction = "ツイートは最大限長め（240〜280文字、約8〜10行）で詳細に描写。"
+    if tweet_length <= 2:
+        length_instruction = "ツイートは極短（80〜120文字、約2行）で簡潔に。"
+    elif tweet_length <= 4:
+        length_instruction = "ツイートは短め（120〜160文字、約3〜4行）。"
+    elif tweet_length <= 7:
+        length_instruction = "ツイートは中程度の長さ（160〜200文字、約5〜6行）。"
+    elif tweet_length <= 9:
+        length_instruction = "ツイートは長め（200〜240文字、約7〜8行）で詳細に描写。"
+    else:
+        length_instruction = "ツイートは最大限長め（240〜280文字、約8〜10行）で詳細に描写。"
 
         # 重複禁止 + 奥行き強化指示（大幅強化）
         variety_instruction = """
