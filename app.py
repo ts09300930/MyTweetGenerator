@@ -38,24 +38,40 @@ reference = st.text_area(
 
 days = st.slider("生成日数", 1, 60, 30)
 
+st.subheader("エロ度調整")
+erotic_level = st.slider("エロ度（1: 控えめ → 10: 生々しい）", min_value=1, max_value=10, value=5)
+
 st.subheader("生成ルール")
-col1, col2, col3 = st.columns(3)
-emoji_ban = col1.checkbox("絵文字禁止", value=True)
-hashtag_ban = col2.checkbox("ハッシュタグ禁止", value=True)
-newline_ban = col3.checkbox("改行なし", value=True)
+col1, col2, col3, col4 = st.columns(4)
+emoji_ban = col1.checkbox("絵文字禁止", value=False)
+hashtag_ban = col2.checkbox("ハッシュタグ禁止", value=False)
+newline_allow = col3.checkbox("改行を適切に使用", value=True)  # デフォルトオン
+newline_ban = col4.checkbox("改行完全禁止", value=False)
 custom_rule = st.text_input("その他ルール")
 
 if st.button("生成開始"):
     if not features or not API_KEY:
         st.error("特徴とAPIキーを入力してください")
     else:
+        # === ここから修正開始 ===
         rule_text = ""
-        if emoji_ban: rule_text += "絵文字は一切禁止。"
-        if hashtag_ban: rule_text += "ハッシュタグは一切禁止。"
-        if newline_ban: rule_text += "改行は一切禁止。"
+        if emoji_ban: rule_text += "絵文字は一切使用禁止。"
+        if hashtag_ban: rule_text += "ハッシュタグは一切使用禁止。"
+        if newline_ban: rule_text += "改行は一切使用禁止。"
+        if newline_allow: rule_text += "自然で読みやすい位置に適度な改行を挿入（2-4行程度）。"
         rule_text += custom_rule
 
+        # エロ度指示
+        if erotic_level <= 3:
+            erotic_instruction = "エロティックさは控えめで、直接的な表現を避け、雰囲気や暗示で表現。"
+        elif erotic_level <= 7:
+            erotic_instruction = "中程度のエロティック表現を使用。感覚的な描写を適度に取り入れる。"
+        else:
+            erotic_instruction = "生々しく大胆なエロティック表現を積極的に使用。具体的な描写も可。"
+
+        # reference_promptをここで定義（ループの外）
         reference_prompt = f"参考スタイル: {reference}" if reference else ""
+        # === 修正終了 ===
 
         with st.spinner(f"{days}日分生成中..."):
             today = datetime.date.today()
@@ -65,12 +81,13 @@ if st.button("生成開始"):
 
             for date in date_strings:
                 prompt = f"""
-                以下の指示で裏垢女子のツイートを1つ生成。
+                厳格に以下の指示で裏垢女子のツイートを1つ生成。
                 - 特徴: {features}
                 {reference_prompt}
                 - 日付考慮: {date}頃
                 - ルール: {rule_text}
-                - 280文字以内、フィクション、エロティックで秘密めいた内容
+                - エロ度: {erotic_instruction}
+                - 280文字以内、フィクション、秘密めいた内容
                 - 出力: ツイート本文のみ
                 """
                 headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
