@@ -30,16 +30,16 @@ features = st.text_area(
     height=150
 )
 
-# 参考スタイルをデフォルトで常時入力（強化版）
+# 参考スタイルをデフォルトで常時入力（分析強化版）
 default_reference = """
 参考アカウントの書き方・フォーマットを厳守（内容は絶対にパクリせず、特徴に基づくオリジナルで生成）:
-全体共通: 改行を多用して読みやすく、寂しさ・欲求・孤独感を強調。自然な連絡誘導（リプください、声かけてねなど）。自己卑下や設定アピールで共感を誘う。
-@NextMrsGerrard: 初老のおじさん限定募集、落ち込み表現、改行で強調、リンク誘導。
-@cpc6MkXOxY54448: S気質・便器アピール、直球募集、短文で出したい人呼びかけ。
+全体共通: 改行を多用して読みやすく、寂しさ・欲求・孤独感を強調。自然な連絡誘導（リプください、声かけてねなど）。自己卑下や設定アピールで共感を誘う。短文中心で切実さを出して誘導文を末尾に。
+@NextMrsGerrard: 初老限定募集、落ち込み・ショック表現、改行強調、リンク誘導。
+@cpc6MkXOxY54448: S気質・便器アピール、直球募集、出したい人呼びかけ。
 @sx14e: 家出少女設定、助けを求める切実さ、なんでもします誘導、改行多用。
 @siznp82913: 台湾人設定、外国人アピール、迷惑かけない強調、日本大好き表現。
 @nico_chan714: 貧乳コンプレックス、自己卑下（小さいけどいいですか？）、質問形式でエンゲージメント。
-その他: 短文中心、寂しさ強調、誘導文を自然に末尾配置。DM単語避け。
+DM単語避け、誘導は自然に。
 """
 
 reference = st.text_area(
@@ -59,8 +59,8 @@ tweet_length = st.slider("ツイート長（1: 短め → 10: 長め）", min_va
 
 st.subheader("生成ルール")
 col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
-emoji_ban = col1.checkbox("絵文字禁止", value=True)  # デフォルトオン
-hashtag_ban = col2.checkbox("ハッシュタグ禁止", value=True)  # デフォルトオン
+emoji_ban = col1.checkbox("絵文字禁止", value=True)
+hashtag_ban = col2.checkbox("ハッシュタグ禁止", value=True)
 newline_allow = col3.checkbox("改行を適切に使用", value=True)
 newline_ban = col4.checkbox("改行完全禁止", value=False)
 dm_invite = col5.checkbox("連絡誘導を入れる", value=False)
@@ -99,8 +99,12 @@ if st.button("生成開始"):
         else:
             length_instruction = "ツイートは長め（220〜280文字）で詳細に描写。"
 
-        # 重複禁止指示
-        repeat_prevention = "すべてのツイートで表現・シチュエーション・言い回しを多様化し、同じような内容やフレーズの繰り返しを厳禁とする。"
+        # 重複禁止指示（強化版）
+        repeat_prevention = """
+        すべてのツイートで内容、表現、シチュエーション、言い回し、感情描写を完全に多様化せよ。
+        同じフレーズ、似た状況、繰り返しの感覚描写を絶対に避け、毎日異なる出来事・感情・比喩を使用。
+        例: 「疼く」「熱くなる」などの繰り返しを禁じ、毎回新しい感覚や出来事を導入。
+        """
 
         reference_prompt = f"参考スタイル: {reference}" if reference else ""
 
@@ -131,7 +135,7 @@ if st.button("生成開始"):
                     data = {
                         "model": model_name,
                         "messages": [{"role": "user", "content": prompt}],
-                        "temperature": 0.95,
+                        "temperature": 1.1,  # 重複防止のため最大限に上げ
                         "max_tokens": 350
                     }
                     response = requests.post(API_URL, headers=headers, json=data)
