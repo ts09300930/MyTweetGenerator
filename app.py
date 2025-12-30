@@ -36,118 +36,118 @@ default_reference = """
 DM単語避け、誘導は自然に。
 """
 
-# CSV読み込み機能
+# CSV読み込み機能（キャラ選択）
 uploaded_csv = st.file_uploader("保存したCSVからキャラ設定を読み込み", type=["csv"])
 if uploaded_csv is not None:
     try:
         df_loaded = pd.read_csv(uploaded_csv)
-        required_columns = ["Character Name"]
-        if all(col in df_loaded.columns for col in required_columns):
-            char_names = df_loaded["Character Name"].dropna().unique().tolist()
-            selected_char = st.selectbox("読み込むキャラを選択", char_names)
-            if selected_char:
-                row = df_loaded[df_loaded["Character Name"] == selected_char].iloc[0]
-                features = row["Features"]
-                reference = row["Reference"]
-                days = int(row["Days"])
-                tweets_per_day = int(row["Tweets Per Day"])
-                erotic_level = int(row["Erotic Level"])
-                tweet_length = int(row["Tweet Length"])
-                question_frequency = int(row["Question Frequency"])
-                self_deprecation_level = int(row["Self Deprecation Level"])
-                recruit_type = row["Recruit Type"]
-                custom_recruit = row["Custom Recruit"] if pd.notna(row["Custom Recruit"]) else ""
-                emoji_ban = bool(row["Emoji Ban"])
-                hashtag_ban = bool(row["Hashtag Ban"])
-                newline_allow = bool(row["Newline Allow"])
-                newline_ban = bool(row["Newline Ban"])
-                dm_invite = bool(row["DM Invite"])
-                sensitive_avoid = bool(row["Sensitive Avoid"])
-                fuzzy_mode = bool(row["Fuzzy Mode"])
-                ellipsis_end = bool(row["Ellipsis End"])
-                dom_s_mode = bool(row["Dom S Mode"])
-                generate_image_prompt = bool(row["Generate Image Prompt"])
-                image_prompt_lang = row["Image Prompt Lang"]
-                mask_on = bool(row["Mask On"])
-                st.success(f"{selected_char}の設定を読み込みました")
-        else:
-            st.error("CSV形式が正しくありません")
+        char_names = ["新規作成"] + df_loaded["Character Name"].dropna().unique().tolist()
+        selected_char = st.selectbox("キャラを選択して設定を復元", char_names)
+        if selected_char != "新規作成":
+            row = df_loaded[df_loaded["Character Name"] == selected_char].iloc[0]
+            features = row["Features"]
+            reference = row["Reference"]
+            days = int(row["Days"])
+            tweets_per_day = int(row["Tweets Per Day"])
+            erotic_level = int(row["Erotic Level"])
+            tweet_length = int(row["Tweet Length"])
+            question_frequency = int(row["Question Frequency"])
+            self_deprecation_level = int(row["Self Deprecation Level"])
+            recruit_type = row["Recruit Type"]
+            custom_recruit = row["Custom Recruit"] if pd.notna(row["Custom Recruit"]) else ""
+            emoji_ban = bool(row["Emoji Ban"])
+            hashtag_ban = bool(row["Hashtag Ban"])
+            newline_allow = bool(row["Newline Allow"])
+            newline_ban = bool(row["Newline Ban"])
+            dm_invite = bool(row["DM Invite"])
+            sensitive_avoid = bool(row["Sensitive Avoid"])
+            fuzzy_mode = bool(row["Fuzzy Mode"])
+            ellipsis_end = bool(row["Ellipsis End"])
+            dom_s_mode = bool(row["Dom S Mode"])
+            generate_image_prompt = bool(row["Generate Image Prompt"])
+            image_prompt_lang = row["Image Prompt Lang"]
+            mask_on = bool(row["Mask On"])
+            custom_rule = row.get("Custom Rule", "")
+            st.success(f"{selected_char}の設定を復元しました")
     except Exception as e:
         st.error(f"CSV読み込みエラー: {e}")
 else:
-    # デフォルト値（新規作成時）
-    features = st.text_area("裏垢女子の特徴を入力", placeholder="例: 20代後半OL、欲求不満、エロティックな日常吐露", height=150)
-    reference = st.text_area("参考スタイル（オプション）\nXアカウントURLや過去ツイート例を貼り付け", value=default_reference, height=300)
-    days = st.slider("生成日数", 1, 60, 30)
-    tweets_per_day = st.slider("1日あたりのツイート数", 1, 5, 2)
-    erotic_level = st.slider("エロ度（1: 控えめ → 10: 生々しい）", 1, 10, 5)
-    tweet_length = st.slider("ツイート長（1: 短め → 10: 長め）", 1, 10, 6)
-    question_frequency = st.slider("質問形式頻度（1: 稀 → 10: 多め）", 1, 10, 4)
-    self_deprecation_level = st.slider("自己卑下度（1: 控えめ → 10: 強い）", 1, 10, 5)
-    recruit_type = st.selectbox("募集タイプを選択", ["なし", "おじさん限定", "家出少女", "便器志願", "外国人アピール", "貧乳コンプ", "カスタム"])
-    custom_recruit = st.text_input("カスタム募集タイプを入力") if recruit_type == "カスタム" else ""
-    col1, col2, col3, col4, col5, col6, col7, col8, col9 = st.columns(9)
-    emoji_ban = col1.checkbox("絵文字禁止", value=True)
-    hashtag_ban = col2.checkbox("ハッシュタグ禁止", value=True)
-    newline_allow = col3.checkbox("改行を適切に使用", value=True)
-    newline_ban = col4.checkbox("改行完全禁止", value=False)
-    dm_invite = col5.checkbox("連絡誘導を入れる", value=False)
-    sensitive_avoid = col6.checkbox("センシティブ回避（暗示表現）", value=True)
-    fuzzy_mode = col7.checkbox("伏字モード", value=False)
-    ellipsis_end = col8.checkbox("末尾に。。や...を入れる", value=True)
-    dom_s_mode = col9.checkbox("ドSモード", value=False)
-    generate_image_prompt = st.checkbox("ツイート連動画像プロンプトを作成", value=True)
-    image_prompt_lang = st.selectbox("プロンプト言語", ["English", "Japanese"], index=0)
-    mask_on = st.checkbox("白いマスク着用を追加", value=True)
+    selected_char = "新規作成"
 
-# キャラ設定CSV保存機能
+# UI入力（読み込み値またはデフォルト）
+features = st.text_area("裏垢女子の特徴を入力", value=features if 'features' in locals() else "", placeholder="例: 20代後半OL、欲求不満、エロティックな日常吐露", height=150)
+reference = st.text_area("参考スタイル（オプション）\nXアカウントURLや過去ツイート例を貼り付け", value=reference if 'reference' in locals() else default_reference, height=300)
+days = st.slider("生成日数", 1, 60, days if 'days' in locals() else 30)
+tweets_per_day = st.slider("1日あたりのツイート数", 1, 5, tweets_per_day if 'tweets_per_day' in locals() else 2)
+erotic_level = st.slider("エロ度（1: 控えめ → 10: 生々しい）", 1, 10, erotic_level if 'erotic_level' in locals() else 5)
+tweet_length = st.slider("ツイート長（1: 短め → 10: 長め）", 1, 10, tweet_length if 'tweet_length' in locals() else 6)
+question_frequency = st.slider("質問形式頻度（1: 稀 → 10: 多め）", 1, 10, question_frequency if 'question_frequency' in locals() else 4)
+self_deprecation_level = st.slider("自己卑下度（1: 控えめ → 10: 強い）", 1, 10, self_deprecation_level if 'self_deprecation_level' in locals() else 5)
+recruit_type = st.selectbox("募集タイプを選択", ["なし", "おじさん限定", "家出少女", "便器志願", "外国人アピール", "貧乳コンプ", "カスタム"], index=["なし", "おじさん限定", "家出少女", "便器志願", "外国人アピール", "貧乳コンプ", "カスタム"].index(recruit_type) if 'recruit_type' in locals() else 0)
+custom_recruit = st.text_input("カスタム募集タイプを入力", value=custom_recruit if 'custom_recruit' in locals() else "") if recruit_type == "カスタム" else ""
+col1, col2, col3, col4, col5, col6, col7, col8, col9 = st.columns(9)
+emoji_ban = col1.checkbox("絵文字禁止", value=emoji_ban if 'emoji_ban' in locals() else True)
+hashtag_ban = col2.checkbox("ハッシュタグ禁止", value=hashtag_ban if 'hashtag_ban' in locals() else True)
+newline_allow = col3.checkbox("改行を適切に使用", value=newline_allow if 'newline_allow' in locals() else True)
+newline_ban = col4.checkbox("改行完全禁止", value=newline_ban if 'newline_ban' in locals() else False)
+dm_invite = col5.checkbox("連絡誘導を入れる", value=dm_invite if 'dm_invite' in locals() else False)
+sensitive_avoid = col6.checkbox("センシティブ回避（暗示表現）", value=sensitive_avoid if 'sensitive_avoid' in locals() else True)
+fuzzy_mode = col7.checkbox("伏字モード", value=fuzzy_mode if 'fuzzy_mode' in locals() else False)
+ellipsis_end = col8.checkbox("末尾に。。や...を入れる", value=ellipsis_end if 'ellipsis_end' in locals() else True)
+dom_s_mode = col9.checkbox("ドSモード", value=dom_s_mode if 'dom_s_mode' in locals() else False)
+generate_image_prompt = st.checkbox("ツイート連動画像プロンプトを作成", value=generate_image_prompt if 'generate_image_prompt' in locals() else True)
+image_prompt_lang = st.selectbox("プロンプト言語", ["English", "Japanese"], index=0 if ('image_prompt_lang' in locals() and image_prompt_lang == "English") else 1)
+mask_on = st.checkbox("白いマスク着用を追加", value=mask_on if 'mask_on' in locals() else True)
+custom_rule = st.text_input("その他ルール", value=custom_rule if 'custom_rule' in locals() else "")
+
+# キャラ設定CSV保存機能（追記対応）
 st.subheader("キャラ設定保存")
-char_name = st.text_input("保存するキャラ名")
+char_name_save = st.text_input("保存するキャラ名（新規または既存）")
 if st.button("現在の設定をCSVに追加保存"):
-    if char_name:
+    if char_name_save:
         new_data = {
-            "Character Name": char_name,
-            "Features": features,
-            "Reference": reference,
-            "Days": days,
-            "Tweets Per Day": tweets_per_day,
-            "Erotic Level": erotic_level,
-            "Tweet Length": tweet_length,
-            "Question Frequency": question_frequency,
-            "Self Deprecation Level": self_deprecation_level,
-            "Recruit Type": recruit_type,
-            "Custom Recruit": custom_recruit,
-            "Emoji Ban": emoji_ban,
-            "Hashtag Ban": hashtag_ban,
-            "Newline Allow": newline_allow,
-            "Newline Ban": newline_ban,
-            "DM Invite": dm_invite,
-            "Sensitive Avoid": sensitive_avoid,
-            "Fuzzy Mode": fuzzy_mode,
-            "Ellipsis End": ellipsis_end,
-            "Dom S Mode": dom_s_mode,
-            "Generate Image Prompt": generate_image_prompt,
-            "Image Prompt Lang": image_prompt_lang,
-            "Mask On": mask_on
+            "Character Name": [char_name_save],
+            "Features": [features],
+            "Reference": [reference],
+            "Days": [days],
+            "Tweets Per Day": [tweets_per_day],
+            "Erotic Level": [erotic_level],
+            "Tweet Length": [tweet_length],
+            "Question Frequency": [question_frequency],
+            "Self Deprecation Level": [self_deprecation_level],
+            "Recruit Type": [recruit_type],
+            "Custom Recruit": [custom_recruit],
+            "Emoji Ban": [emoji_ban],
+            "Hashtag Ban": [hashtag_ban],
+            "Newline Allow": [newline_allow],
+            "Newline Ban": [newline_ban],
+            "DM Invite": [dm_invite],
+            "Sensitive Avoid": [sensitive_avoid],
+            "Fuzzy Mode": [fuzzy_mode],
+            "Ellipsis End": [ellipsis_end],
+            "Dom S Mode": [dom_s_mode],
+            "Generate Image Prompt": [generate_image_prompt],
+            "Image Prompt Lang": [image_prompt_lang],
+            "Mask On": [mask_on],
+            "Custom Rule": [custom_rule]
         }
-        df_new = pd.DataFrame([new_data])
+        df_new = pd.DataFrame(new_data)
         csv_new = df_new.to_csv(index=False).encode('utf-8')
         st.download_button(
-            label="CSVダウンロード（新規キャラ追加）",
+            label="CSVダウンロード（現在のキャラ追加）",
             data=csv_new,
-            file_name=f"{char_name}_settings.csv",
+            file_name="characters_all.csv",
             mime="text/csv"
         )
-        st.success(f"「{char_name}」の設定をCSV形式で保存しました。既存CSVに手動で追加してください")
+        st.success("現在の設定をCSVに追加保存しました（ファイル名固定: characters_all.csv）。既存CSVとマージしてご利用ください")
     else:
         st.error("キャラ名を入力してください")
 
-# 生成開始以降（変更なし）
+# 生成開始
 if st.button("生成開始"):
     if not features or not API_KEY:
         st.error("特徴とAPIキーを入力してください")
     else:
-        # rule_text構築（変更なし）
         rule_text = ""
         if emoji_ban: rule_text += "絵文字は一切使用禁止。"
         if hashtag_ban: rule_text += "ハッシュタグは一切使用禁止。"
@@ -160,7 +160,7 @@ if st.button("生成開始"):
         if dom_s_mode: rule_text += "ドSな口調で上から目線・言葉責め・煽りを積極的に使用（例: 「おじさんならどうするの？」「満足させられる人だけ来て」など）。"
         rule_text += custom_rule
 
-        # 各種指示（変更なし）
+        # エロ度指示
         if erotic_level <= 3:
             erotic_instruction = "エロティックさは控えめで、直接的な表現を避け、雰囲気や暗示で表現。"
         elif erotic_level <= 7:
@@ -168,6 +168,7 @@ if st.button("生成開始"):
         else:
             erotic_instruction = "生々しく大胆なエロティック表現を積極的に使用。具体的な描写も可。"
 
+        # ツイート長指示
         if tweet_length <= 3:
             length_instruction = "ツイートは短め（100文字以内）で簡潔に。"
         elif tweet_length <= 7:
@@ -175,12 +176,14 @@ if st.button("生成開始"):
         else:
             length_instruction = "ツイートは長め（220〜280文字）で詳細に描写。"
 
+        # 重複禁止指示（強化版）
         repeat_prevention = """
         すべてのツイートで内容、表現、シチュエーション、言い回し、感情描写を完全に多様化せよ。
         同じフレーズ、似た状況、繰り返しの感覚描写を絶対に避け、毎日異なる出来事・感情・比喩を使用。
         例: 「疼く」「熱になる」などの繰り返しを禁じ、毎回新しい感覚や出来事を導入。
         """
 
+        # 質問形式頻度指示
         if question_frequency <= 3:
             question_instruction = "質問形式のツイートは稀に。"
         elif question_frequency <= 7:
@@ -188,6 +191,7 @@ if st.button("生成開始"):
         else:
             question_instruction = "ほとんどのツイートを質問形式にする。"
 
+        # 自己卑下度指示
         if self_deprecation_level <= 3:
             deprecation_instruction = "自己卑下は控えめに。"
         elif self_deprecation_level <= 7:
@@ -195,6 +199,7 @@ if st.button("生成開始"):
         else:
             deprecation_instruction = "強い自己卑下・コンプレックス強調で共感を誘う（例: 「私みたいなの相手してくれる？」）。"
 
+        # 募集タイプ指示
         recruit_instruction = ""
         if recruit_type == "おじさん限定":
             recruit_instruction = "初老のおじさん限定で募集するニュアンスを強調。"
