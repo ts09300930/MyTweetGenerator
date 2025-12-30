@@ -89,6 +89,7 @@ custom_rule = st.text_input("その他ルール")
 st.subheader("画像プロンプト生成")
 generate_image_prompt = st.checkbox("ツイート連動画像プロンプトを作成", value=True)
 image_prompt_lang = st.selectbox("プロンプト言語", ["English", "Japanese"], index=0)
+mask_on = st.checkbox("白いマスク着用を追加", value=True)
 
 if st.button("生成開始"):
     if not features or not API_KEY:
@@ -204,16 +205,18 @@ if st.button("生成開始"):
                     tweets.append(tweet)
                     date_strings.append(f"{date_str} ({time_label})")
 
-                    # 画像プロンプト生成
+                    # 画像プロンプト生成（写真感強化 + 白いマスクオプション）
                     image_prompt = ""
                     if generate_image_prompt:
                         image_prompt_lang_text = "English" if image_prompt_lang == "English" else "Japanese"
+                        mask_text = "wearing a white surgical face mask covering nose and mouth," if mask_on else ""
+                        photo_style = "photorealistic, high resolution photo, natural indoor lighting, candid selfie style like taken with smartphone camera, realistic skin texture, detailed eyes and hair"
                         image_prompt_prompt = f"""
                         このツイート '{tweet}' に連動したX投稿用画像の詳細なプロンプトを作成。
-                        - リアルスタイル
+                        - スタイル: {photo_style}
                         - Twitterセンシティブに引っかからない程度のエロさ（暗示的、服着用、雰囲気重視）
                         - 言語: {image_prompt_lang_text}
-                        - 必ず含む: 日本人女性、年齢（{features}から推定）、胸の大きさ（{features}から推定）
+                        - 必ず含む: Japanese woman, age (estimated from {features}), breast size (estimated from {features}), {mask_text}
                         - 出力: プロンプト本文のみ
                         """
                         data_image = {
