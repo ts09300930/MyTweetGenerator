@@ -67,8 +67,9 @@ if uploaded_csv is not None:
             generate_image_prompt = bool(row["Generate Image Prompt"])
             image_prompt_lang = row["Image Prompt Lang"]
             mask_on = bool(row["Mask On"])
-            custom_rule = row.get("Custom Rule", "")  # ツイート向け
-            image_custom_prompt = row.get("Image Custom Prompt", "")  # 画像向け
+            mirror_selfie_mode = row.get("Mirror Selfie Mode", "顔が映る・スマホ映り込み")
+            custom_rule = row.get("Custom Rule", "")
+            image_custom_prompt = row.get("Image Custom Prompt", "")
             st.success(f"{selected_char}の設定を復元しました")
     except Exception as e:
         st.error(f"CSV読み込みエラー: {e}")
@@ -195,11 +196,13 @@ if st.button("生成開始"):
         else:
             length_instruction = "ツイートは最大限長め（240〜280文字、約8〜10行）で詳細に描写。"
 
-        # 重複禁止 + 奥行き強化指示（強化版）
+        # 重複禁止 + 奥行き強化指示（大幅強化版）
         variety_instruction = """
         すべてのツイートで内容、表現、シチュエーション、言い回し、感情描写を完全に多様化せよ。
-        同じフレーズ、似た状況、繰り返しの感覚描写を絶対に避け、毎日異なる出来事・感情・比喩を使用。
-        例: 「疼く」「熱になる」などの繰り返しを禁じ、毎回新しい感覚や出来事を導入。
+        毎日異なる具体的な日常イベント（例: 専門学校の授業、バイト先の出来事、通勤電車、コンビニ買い物、SNS閲覧、友人会話、テレビ視聴、散歩、料理など）を1つ必ず入れ、それきっかけでムラムラする流れにする。
+        妄想シーンも毎日変え、おじさんとの出会い方（電車、コンビニ、夢の中、SNSリプ、街角、カフェ、病院など）、場所（部屋、ホテル、車内、公園、屋上など）、行為の詳細を毎回異なるものに。
+        感情の起伏も変え（期待、苛立ち、後悔、罪悪感、興奮、切なさ、焦燥、陶酔など日替わり）。
+        同じフレーズ・似た状況の繰り返しを絶対禁止。
         """
 
         # 質問形式頻度指示
@@ -238,7 +241,7 @@ if st.button("生成開始"):
         with st.spinner(f"{days}日分（{days * tweets_per_day}ツイート）生成中..."):
             today = datetime.date.today()
             dates = [today - datetime.timedelta(days=i) for i in range(days)]
-            dates.reverse()
+            dates.reverse()  # 今日から古い順に修正（今日から生成）
             date_strings = []
             tweets = []
             image_prompts = []
@@ -277,7 +280,7 @@ if st.button("生成開始"):
                     tweets.append(tweet)
                     date_strings.append(f"{date_str} ({time_label})")
 
-                    # 画像プロンプト生成（画像専用指示追加）
+                    # 画像プロンプト生成
                     image_prompt = ""
                     if generate_image_prompt:
                         image_prompt_lang_text = "English" if image_prompt_lang == "English" else "Japanese"
