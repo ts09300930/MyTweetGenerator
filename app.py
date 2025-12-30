@@ -101,15 +101,12 @@ fuzzy_mode = row2[1].checkbox("伏字モード", value=fuzzy_mode if 'fuzzy_mode
 ellipsis_end = row2[2].checkbox("末尾に。。や...を入れる", value=ellipsis_end if 'ellipsis_end' in locals() else True)
 dom_s_mode = row2[3].checkbox("ドSモード", value=dom_s_mode if 'dom_s_mode' in locals() else False)
 mirror_selfie_mode = row2[4].radio("鏡自撮りモード", ["オフ", "顔が映る・スマホ映り込み", "顔が映る・スマホ映らない", "顔が映らない・スマホ映らない"], index=["オフ", "顔が映る・スマホ映り込み", "顔が映る・スマホ映らない", "顔が映らない・スマホ映らない"].index(mirror_selfie_mode) if 'mirror_selfie_mode' in locals() else 1)
-
 generate_image_prompt = st.checkbox("ツイート連動画像プロンプトを作成", value=generate_image_prompt if 'generate_image_prompt' in locals() else True)
 image_prompt_lang = st.selectbox("プロンプト言語", ["English", "Japanese"], index=0 if ('image_prompt_lang' in locals() and image_prompt_lang == "English") else 1)
 mask_on = st.checkbox("白いマスク着用を追加", value=mask_on if 'mask_on' in locals() else True)
-
 # ルールを分離
 custom_rule = st.text_input("ツイートその他ルール（ツイート本文向け）", value=custom_rule if 'custom_rule' in locals() else "")
 image_custom_prompt = st.text_input("画像プロンプト追加指示（画像向け）", value=image_custom_prompt if 'image_custom_prompt' in locals() else "", placeholder="例: 夜の部屋背景、上半身のみ、笑顔、薄暗い照明")
-
 # キャラ設定CSV保存機能（追記対応 + 新規項目追加）
 st.subheader("キャラ設定保存")
 char_name_save = st.text_input("保存するキャラ名（新規または既存）")
@@ -241,7 +238,7 @@ if st.button("生成開始"):
         with st.spinner(f"{days}日分（{days * tweets_per_day}ツイート）生成中..."):
             today = datetime.date.today()
             dates = [today - datetime.timedelta(days=i) for i in range(days)]
-            dates.reverse()  # 今日から古い順に修正（今日から生成）
+            dates.reverse()
             date_strings = []
             tweets = []
             image_prompts = []
@@ -280,7 +277,7 @@ if st.button("生成開始"):
                     tweets.append(tweet)
                     date_strings.append(f"{date_str} ({time_label})")
 
-                    # 画像プロンプト生成
+                    # 画像プロンプト生成（@BeaulieuEv74781参考 + 鏡自撮りモード対応）
                     image_prompt = ""
                     if generate_image_prompt:
                         image_prompt_lang_text = "English" if image_prompt_lang == "English" else "Japanese"
