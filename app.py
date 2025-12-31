@@ -152,50 +152,73 @@ if st.button("現在の設定をCSVに追加保存"):
         st.success("現在の設定をCSVに追加保存しました（ファイル名固定: characters_all.csv）。既存CSVとマージしてご利用ください")
     else:
         st.error("キャラ名を入力してください")
-# 新機能: 画像アップロードでプロンプト生成（ツイート独立）
+# 新機能: 画像アップロードでプロンプト生成（ツイート独立） - 複数画像対応 + プレビュー追加
 st.subheader("画像アップロードでプロンプト生成（ツイート独立）")
-uploaded_image = st.file_uploader("画像をアップロード（ツイート特徴を反映したプロンプト生成）", type=["jpg", "png", "jpeg"])
-if uploaded_image is not None:
-    image_base64 = base64.b64encode(uploaded_image.getvalue()).decode('utf-8')
-    if st.button("画像プロンプト生成"):
+uploaded_images = st.file_uploader(
+    "画像を複数アップロード（ツイート特徴を反映したプロンプト生成）",
+    type=["jpg", "png", "jpeg"],
+    accept_multiple_files=True
+)
+if uploaded_images:
+    # アップロードされた画像をプレビュー表示
+    st.write("### アップロードされた画像プレビュー")
+    cols = st.columns(min(len(uploaded_images), 4))  # 最大4列で表示
+    for idx, uploaded_image in enumerate(uploaded_images):
+        with cols[idx % 4]:
+            st.image(uploaded_image, caption=uploaded_image.name, use_column_width=True)
+
+    if st.button("複数画像からプロンプト生成"):
         if not features or not API_KEY:
             st.error("特徴とAPIキーを入力してください")
         else:
-            image_analysis_prompt = f"""
-            この画像を分析: data:image/jpeg;base64,{image_base64}
-            - 詳細記述: 人物の外見、服装、ポーズ、背景を忠実に記述。
-            - 出力: 記述本文のみ
-            """
-            headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
-            data_analysis = {
-                "model": model_name,
-                "messages": [{"role": "user", "content": image_analysis_prompt}],
-                "temperature": 0.8,
-                "max_tokens": 300
-            }
-            response_analysis = requests.post(API_URL, headers=headers, json=data_analysis)
-            if response_analysis.status_code == 200:
-                image_desc = response_analysis.json()["choices"][0]["message"]["content"].strip()
-                # 特徴統合プロンプト
-                integrated_prompt = f"""
-                画像記述: {image_desc}
-                特徴: {features}
-                - 忠実に再現しつつ、特徴を統合した画像プロンプトを作成。
-                - 言語: {image_prompt_lang_text if 'image_prompt_lang' in locals() else 'English'}
-                - 出力: プロンプト本文のみ
-                """
-                data_integrated = {
-                    "model": model_name,
-                    "messages": [{"role": "user", "content": integrated_prompt}],
-                    "temperature": 0.8,
-                    "max_tokens": 200
-                }
-                response_integrated = requests.post(API_URL, headers=headers, json=data_integrated)
-                if response_integrated.status_code == 200:
-                    new_image_prompt = response_integrated.json()["choices"][0]["message"]["content"].strip()
-                    st.text_area("生成された画像プロンプト", new_image_prompt)
-            else:
-                st.error("画像分析エラー")
+            generated_prompts = []
+            with st.spinner("画像を分析・プロンプト生成中..."):
+                for uploaded_image in uploaded_images:
+                    image_base64 = base64.b64encode(uploaded_image.getvalue()).decode('utf-8')
+                    image_analysis_prompt = f"""
+                    この画像を分析: data:image/jpeg;base64,{image_base64}
+                    - 詳細記述: 人物の外見、服装、ポーズ、背景を忠実に記述。
+                    - 出力: 記述本文のみ
+                    """
+                    headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
+                    data_analysis = {
+                        "model": model_name,
+                        "messages": [{"role": "user", "content": image_analysis_prompt}],
+                        "temperature": 0.8,
+                        "max_tokens": 300
+                    }
+                    response_analysis = requests.post(API_URL, headers=headers, json=data_analysis)
+                    if response_analysis.status_code == 200:
+                        image_desc = response_analysis.json()["choices"][0]["message"]["content"].strip()
+                        # 特徴統合プロンプト
+                        integrated_prompt = f"""
+                        画像記述: {image_desc}
+                        特徴: {features}
+                        - 忠実に再現しつつ、特徴を統合した画像プロンプトを作成。
+                        - 言語: {'English' if image_prompt_lang == 'English' else 'Japanese'}
+                        - 出力: プロンプト本文のみ
+                        """
+                        data_integrated = {
+                            "model": model_name,
+                            "messages": [{"role": "user", "content": integrated_prompt}],
+                            "temperature": 0.8,
+                            "max_tokens": 200
+                        }
+                        response_integrated = requests.post(API_URL, headers=headers, json=data_integrated)
+                        if response_integrated.status_code == 200:
+                            new_image_prompt = response_integrated.json()["choices"][0]["message"]["content"].strip()
+                            generated_prompts.append((uploaded_image.name, new_image_prompt))
+                        else:
+                            generated_prompts.append((uploaded_image.name, "統合エラー"))
+                    else:
+                        generated_prompts.append((uploaded_image.name, "分析エラー"))
+
+            # 生成結果表示
+            st.write("### 生成された画像プロンプト")
+            for filename, prompt in generated_prompts:
+                with st.expander(f"{filename} のプロンプト"):
+                    st.text_area(f"{filename}", prompt, height=200, key=filename)
+
 # 生成開始
 if st.button("生成開始"):
     if not features or not API_KEY:
