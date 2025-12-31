@@ -4,6 +4,8 @@ import pandas as pd
 import requests
 import io
 import base64
+import re  # 追加: 特徴から抽出するため
+
 st.title("裏垢女子ツイート生成ツール")
 # APIキー管理
 if "GROK_API_KEY" in st.secrets:
@@ -106,6 +108,23 @@ atmosphere_only_mode = st.checkbox("雰囲気だけモード（口元だけ露�
 # ルールを分離
 custom_rule = st.text_input("ツイートその他ルール（ツイート本文向け）", value=custom_rule if 'custom_rule' in locals() else "")
 image_custom_prompt = st.text_input("画像プロンプト追加指示（画像向け）", value=image_custom_prompt if 'image_custom_prompt' in locals() else "", placeholder="例: 夜の部屋背景、上半身のみ、笑顔、薄暗い照明")
+# 身体特徴の別フィールド追加
+st.subheader("身体特徴設定")
+# 特徴から自動抽出
+def extract_body_features(features):
+    cup_pattern = re.search(r'([A-Z])カップ', features)
+    cup_size = cup_pattern.group(1) if cup_pattern else 'G'  # デフォルトG
+    hair_pattern = re.search(r'([金黒茶]髪|ロング|ショート|ミディアム)', features)
+    hair_style = hair_pattern.group(0) if hair_pattern else '金髪ロング'  # デフォルト金髪ロング
+    height_pattern = re.search(r'(\d{3})cm', features)
+    height = height_pattern.group(1) if height_pattern else '160'  # デフォルト160cm
+    return cup_size, hair_style, height
+
+cup_size, hair_style, height = extract_body_features(features)
+cup_size = st.text_input("胸のカップ数", value=cup_size)
+hair_style = st.text_input("髪型", value=hair_style)
+height = st.text_input("身長 (cm)", value=height)
+
 # キャラ設定CSV保存機能（追記対応 + 新規項目追加）
 st.subheader("キャラ設定保存")
 char_name_save = st.text_input("保存するキャラ名（新規または既存）")
@@ -152,7 +171,7 @@ if st.button("現在の設定をCSVに追加保存"):
         st.success("現在の設定をCSVに追加保存しました（ファイル名固定: characters_all.csv）。既存CSVとマージしてご利用ください")
     else:
         st.error("キャラ名を入力してください")
-# 新機能: 画像アップロードでプロンプト生成（ツイート独立） - 画像忠実再現最終版
+# 新機能: 画像アップロードでプロンプト生成（ツイート独立） - 複数画像対応 + プレビュー追加 + 日本人指定強化
 st.subheader("画像アップロードでプロンプト生成（ツイート独立）")
 uploaded_images = st.file_uploader(
     "画像を複数アップロード（ツイート特徴を反映したプロンプト生成）",
@@ -162,43 +181,60 @@ uploaded_images = st.file_uploader(
 if uploaded_images:
     # アップロードされた画像をプレビュー表示
     st.write("### アップロードされた画像プレビュー")
-    cols = st.columns(min(len(uploaded_images), 4))
+    cols = st.columns(min(len(uploaded_images), 4))  # 最大4列で表示
     for idx, uploaded_image in enumerate(uploaded_images):
         with cols[idx % 4]:
             st.image(uploaded_image, caption=uploaded_image.name, use_column_width=True)
 
     if st.button("複数画像からプロンプト生成"):
-        if not API_KEY:
-            st.error("APIキーを入力してください")
+        if not features or not API_KEY:
+            st.error("特徴とAPIキーを入力してください")
         else:
             generated_prompts = []
             with st.spinner("画像を分析・プロンプト生成中..."):
                 for uploaded_image in uploaded_images:
-                    mime_type = uploaded_image.type or "image/jpeg"
+                    # 動的に MIMEタイプを判定
+                    mime_type = uploaded_image.type or "image/jpeg"  # フォールバック追加
                     image_base64 = base64.b64encode(uploaded_image.getvalue()).decode('utf-8')
-                    # 分析プロンプト - 詳細を最大限抽出
                     image_analysis_prompt = f"""
-                    この画像を詳細に分析し、画像生成プロンプトとして直接使用可能な英語の記述を作成。
-                    data:{mime_type};base64,{image_base64}
-                    - 人物の外見、服装、ポーズ、表情、背景、光の当たり方、体型、髪型、すべてを正確に記述。
-                    - photorealistic, high resolution, detailedなどの品質向上キーワードを追加。
-                    - 特徴の追加は一切せず、画像そのままの忠実なプロンプトを作成。
-                    - 言語: English
-                    - 出力: プロンプト本文のみ
+                    この画像を分析: data:{mime_type};base64,{image_base64}
+                    - 詳細記述: 人物の外見、服装、ポーズ、背景を忠実に記述。
+                    - 出力: 記述本文のみ
                     """
                     headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
                     data_analysis = {
                         "model": model_name,
                         "messages": [{"role": "user", "content": image_analysis_prompt}],
-                        "temperature": 0.3,  # 忠実性を極限まで高める
+                        "temperature": 0.8,
                         "max_tokens": 300
                     }
                     response_analysis = requests.post(API_URL, headers=headers, json=data_analysis)
                     if response_analysis.status_code == 200:
-                        new_image_prompt = response_analysis.json()["choices"][0]["message"]["content"].strip()
-                        generated_prompts.append((uploaded_image.name, new_image_prompt))
+                        image_desc = response_analysis.json()["choices"][0]["message"]["content"].strip()
+                        # 特徴統合プロンプト - 画像記述を優先し、特徴を補助的に反映、日本人指定追加
+                        integrated_prompt = f"""
+                        画像記述: {image_desc}
+                        特徴: {features}
+                        - 画像の外見、服装、ポーズ、背景を厳格に忠実に再現した画像プロンプトを作成。
+                        - 特徴は画像と矛盾しない範囲でのみ軽く反映（画像の核心を変えない）。
+                        - 必ず日本人女性として描写（典型的な日本人顔立ち: 柔らかい丸顔、アーモンド形の目、公平な肌、直黒髪など）。
+                        - 言語: {'English' if image_prompt_lang == 'English' else 'Japanese'}
+                        - 出力: プロンプト本文のみ
+                        """
+                        data_integrated = {
+                            "model": model_name,
+                            "messages": [{"role": "user", "content": integrated_prompt}],
+                            "temperature": 0.8,
+                            "max_tokens": 200
+                        }
+                        response_integrated = requests.post(API_URL, headers=headers, json=data_integrated)
+                        if response_integrated.status_code == 200:
+                            new_image_prompt = response_integrated.json()["choices"][0]["message"]["content"].strip()
+                            generated_prompts.append((uploaded_image.name, new_image_prompt))
+                        else:
+                            generated_prompts.append((uploaded_image.name, "統合エラー"))
                     else:
-                        generated_prompts.append((uploaded_image.name, f"エラー: {response_analysis.text[:100]}"))
+                        generated_prompts.append((uploaded_image.name, f"分析エラー: {response_analysis.text[:100]}"))
 
             # 生成結果表示
             st.write("### 生成された画像プロンプト")
