@@ -4,7 +4,7 @@ import pandas as pd
 import requests
 import io
 import base64
-import re  # 特徴から抽出するため追加
+import re
 st.title("裏垢女子ツイート生成ツール")
 # APIキー管理
 if "GROK_API_KEY" in st.secrets:
@@ -112,7 +112,6 @@ custom_rule = st.text_input("ツイートその他ルール（ツイート本文
 image_custom_prompt = st.text_input("画像プロンプト追加指示（画像向け）", value=image_custom_prompt if 'image_custom_prompt' in locals() else "", placeholder="例: 夜の部屋背景、上半身のみ、笑顔、薄暗い照明")
 # 身体特徴設定（特徴から自動抽出）
 st.subheader("身体特徴設定")
-# 特徴から自動抽出関数
 def extract_body_features(features_text):
     cup_match = re.search(r'([A-Z])カップ', features_text)
     cup = cup_match.group(1) if cup_match else "G"
@@ -123,7 +122,6 @@ def extract_body_features(features_text):
     japanese = "日本人" in features_text
     return cup, hair, age, japanese
 
-# 自動抽出実行
 auto_cup, auto_hair, auto_age, auto_japanese = extract_body_features(features)
 
 cup_size = st.text_input("胸のカップ数 (例: G)", value=auto_cup)
@@ -180,99 +178,86 @@ if st.button("現在の設定をCSVに追加保存"):
         st.success("現在の設定をCSVに追加保存しました（ファイル名固定: characters_all.csv）。既存CSVとマージしてご利用ください")
     else:
         st.error("キャラ名を入力してください")
-# 新機能: 画像アップロードでプロンプト生成（ツイート独立） - 複数画像対応 + プレビュー追加 + 指定プロンプト使用
+# 新機能: 画像アップロードでプロンプト生成（ツイート独立） - 1枚ずつ忠実生成 + 言語対応
 st.subheader("画像アップロードでプロンプト生成（ツイート独立）")
 uploaded_images = st.file_uploader(
-    "画像を複数アップロード（ツイート特徴を反映したプロンプト生成）",
+    "画像をアップロード（複数可）",
     type=["jpg", "png", "jpeg"],
     accept_multiple_files=True
 )
 if uploaded_images:
-    # アップロードされた画像をプレビュー表示
     st.write("### アップロードされた画像プレビュー")
     cols = st.columns(min(len(uploaded_images), 4))
     for idx, uploaded_image in enumerate(uploaded_images):
         with cols[idx % 4]:
             st.image(uploaded_image, caption=uploaded_image.name, use_column_width=True)
 
-    if st.button("複数画像からプロンプト生成"):
-        if not features or not API_KEY:
-            st.error("特徴とAPIキーを入力してください")
+    if st.button("画像からプロンプト生成"):
+        if not API_KEY:
+            st.error("APIキーを入力してください")
         else:
             generated_prompts = []
-            with st.spinner("画像を分析・プロンプト生成中..."):
-                num_images = len(uploaded_images)
-                japanese_text = "日本人" if is_japanese else ""
-                base_prompt = f"""
-                今から送る{num_images}枚みたいな「{hair_style}」の「{japanese_text}女性{age}さいを生成したいんだけど、プロ意識の画像クリエイターとして、この写真の特徴を事細かく捉えて、Higgsfieldで画像生成するための英語プロンプトを考えて あくまでも忠実におねがいします。「{hair_style}」の「{japanese_text}女性{age}」になるような英文プロンプト書いてね {num_images}枚それぞれの英文プロンプトを作成してください。胸の大きさは「{cup_size}」くらいでお願いします
-                """
-                # 画像をプロンプトに追加
-                for i, uploaded_image in enumerate(uploaded_images, 1):
+            with st.spinner("画像を分析中..."):
+                for uploaded_image in uploaded_images:
                     mime_type = uploaded_image.type or "image/jpeg"
                     image_base64 = base64.b64encode(uploaded_image.getvalue()).decode('utf-8')
-                    base_prompt += f"\n画像{i}: data:{mime_type};base64,{image_base64}"
-
-                headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
-                data = {
-                    "model": model_name,
-                    "messages": [{"role": "user", "content": base_prompt}],
-                    "temperature": 0.5,
-                    "max_tokens": 2000  # 複数枚対応
-                }
-                response = requests.post(API_URL, headers=headers, json=data)
-                if response.status_code == 200:
-                    full_response = response.json()["choices"][0]["message"]["content"].strip()
-                    # プロンプトを分割（番号や空行で）
-                    prompts = re.split(r'(?=\d+\.\s|Prompt \d+:)', full_response)
-                    prompts = [p.strip() for p in prompts if p.strip()]
-                    for idx, prompt in enumerate(prompts):
-                        if idx < num_images:
-                            generated_prompts.append((uploaded_images[idx].name, prompt))
-                else:
-                    for uploaded_image in uploaded_images:
+                    lang_text = "英語" if image_prompt_lang == "English" else "日本語"
+                    quality_keywords = "photorealistic, ultra high resolution, detailed texture, natural lighting" if image_prompt_lang == "English" else "超高解像度、フォトリアリスティック、詳細な質感、自然光"
+                    image_analysis_prompt = f"""
+                    この画像を分析し、画像生成AIで使用可能な詳細なプロンプトを{lang_text}で作成してください。
+                    data:{mime_type};base64,{image_base64}
+                    - 人物の外見、服装、ポーズ、表情、体型、髪型、背景、光の当たり方、すべてを正確に記述。
+                    - {quality_keywords} などの品質向上キーワードを追加。
+                    - 追加の特徴や変更は一切せず、画像を100%忠実に再現。
+                    - 出力: プロンプト本文のみ
+                    """
+                    headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
+                    data = {
+                        "model": model_name,
+                        "messages": [{"role": "user", "content": image_analysis_prompt}],
+                        "temperature": 0.3,
+                        "max_tokens": 300
+                    }
+                    response = requests.post(API_URL, headers=headers, json=data)
+                    if response.status_code == 200:
+                        new_image_prompt = response.json()["choices"][0]["message"]["content"].strip()
+                        generated_prompts.append((uploaded_image.name, new_image_prompt))
+                    else:
                         generated_prompts.append((uploaded_image.name, f"エラー: {response.text[:100]}"))
 
-            # 生成結果表示
             st.write("### 生成された画像プロンプト")
             for filename, prompt in generated_prompts:
                 with st.expander(f"{filename} のプロンプト"):
                     st.text_area(f"{filename}", prompt, height=200, key=filename)
 
-# 新機能: Grokとの会話モード (画像アップロード後)
-st.subheader("Grokとの会話モード (画像付きプロンプト生成)")
-uploaded_chat_image = st.file_uploader("会話モード用画像をアップロード", type=["jpg", "png", "jpeg"])
+# Grokとの会話モード（画像付きチャット） - 強化
+st.subheader("Grokと直接会話（画像付きプロンプト作成推奨）")
+uploaded_chat_image = st.file_uploader("会話用画像をアップロード（1枚推奨）", type=["jpg", "png", "jpeg"])
 if uploaded_chat_image:
     mime_type = uploaded_chat_image.type or "image/jpeg"
     image_base64 = base64.b64encode(uploaded_chat_image.getvalue()).decode('utf-8')
-    st.image(uploaded_chat_image, caption="アップロードされた画像", use_column_width=True)
-    # 会話履歴の初期化
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
-
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
-
-    if prompt := st.chat_input("Grokに質問（画像付き）"):
-        st.session_state.messages.append({"role": "user", "content": prompt})
+    st.image(uploaded_chat_image, caption="アップロード画像", use_column_width=True)
+    if "chat_messages" not in st.session_state:
+        st.session_state.chat_messages = []
+    for msg in st.session_state.chat_messages:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
+    if prompt := st.chat_input("Grokに質問（例: この画像を忠実に再現した英語プロンプトを作成して）"):
+        st.session_state.chat_messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
-
-        full_prompt = f"""
-        {prompt}
-        画像: data:{mime_type};base64,{image_base64}
-        """
+        full_prompt = f"{prompt}\n画像: data:{mime_type};base64,{image_base64}"
         headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
         data = {
             "model": model_name,
             "messages": [{"role": "user", "content": full_prompt}],
-            "temperature": 0.7,
+            "temperature": 0.3,
             "max_tokens": 500
         }
         response = requests.post(API_URL, headers=headers, json=data)
         if response.status_code == 200:
             assistant_response = response.json()["choices"][0]["message"]["content"].strip()
-            st.session_state.messages.append({"role": "assistant", "content": assistant_response})
+            st.session_state.chat_messages.append({"role": "assistant", "content": assistant_response})
             with st.chat_message("assistant"):
                 st.markdown(assistant_response)
         else:
@@ -367,7 +352,7 @@ if st.button("生成開始"):
                     prompt = f"""
                     厳格に以下の指示で裏垢女子のツイートを1つ生成。
                     - 特徴: {features}
-                    - 身体特徴: {cup_size}カップ、{hair_style}、{'日本人女性' if is_japanese else '非日本人'}
+                    - 身体特徴: {cup_size}カップ、{hair_style}、{'日本人女性' if is_japanese else '非日本人'}、{age}歳
                     {reference_prompt}
                     - 募集タイプ: {recruit_instruction}
                     - 日付考慮: {date_str}頃（{time_label}）
