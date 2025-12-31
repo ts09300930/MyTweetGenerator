@@ -4,6 +4,7 @@ import pandas as pd
 import requests
 import io
 import base64
+import re
 st.title("裏垢女子ツイート生成ツール")
 # APIキー管理
 if "GROK_API_KEY" in st.secrets:
@@ -184,33 +185,42 @@ if uploaded_images:
         else:
             generated_prompts = []
             with st.spinner("画像を分析・プロンプト生成中..."):
+                # 特徴から年齢抽出
+                age_match = re.search(r'(\d+)さい', features)
+                age = age_match.group(1) if age_match else "22"
+                japanese_text = "日本人" if is_japanese else ""
+                num_images = len(uploaded_images)
+                image_base64_list = []
                 for uploaded_image in uploaded_images:
                     mime_type = uploaded_image.type or "image/jpeg"
                     image_base64 = base64.b64encode(uploaded_image.getvalue()).decode('utf-8')
-                    # 直接画像生成プロンプトを作成（統合なし）
-                    image_analysis_prompt = f"""
-                    この画像を分析し、画像生成AIで使用可能な詳細なプロンプトを英語で作成してください。
-                    data:{mime_type};base64,{image_base64}
-                    - 人物の外見、服装、ポーズ、表情、体型、髪型、背景、光の当たり方、すべてを正確に記述。
-                    - photorealistic, ultra high resolution, detailed texture, natural lighting などの品質向上キーワードを追加。
-                    - 追加の特徴や変更は一切せず、画像を100%忠実に再現。
-                    - {'A {cup_size} cup bust, {hair_style} hair' if cup_size or hair_style else ''}
-                    - {'A Japanese woman with typical Japanese facial features' if is_japanese else ''}
-                    - 出力: プロンプト本文のみ
-                    """
-                    headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
-                    data_analysis = {
-                        "model": model_name,
-                        "messages": [{"role": "user", "content": image_analysis_prompt}],
-                        "temperature": 0.3,
-                        "max_tokens": 300
-                    }
-                    response_analysis = requests.post(API_URL, headers=headers, json=data_analysis)
-                    if response_analysis.status_code == 200:
-                        new_image_prompt = response_analysis.json()["choices"][0]["message"]["content"].strip()
-                        generated_prompts.append((uploaded_image.name, new_image_prompt))
-                    else:
-                        generated_prompts.append((uploaded_image.name, f"エラー: {response_analysis.text[:100]}"))
+                    image_base64_list.append(f"data:{mime_type};base64,{image_base64}")
+                # まとめてGrokに投げるプロンプト
+                base_prompt = f"""
+                今から送る{num_images}枚みたいな「{hair_style}」の「{japanese_text}女性{age}さいを生成したいんだけど、プロ意識の画像クリエイターとして、この写真の特徴を事細かく捉えて、Higgsfieldで画像生成するための英語プロンプトを考えて あくまでも忠実におねがいします。「{hair_style}」の「{japanese_text}女性{age}」になるような英文プロンプト書いてね {num_images}枚それぞれの英文プロンプトを作成してください。胸の大きさは「{cup_size}」くらいでお願いします
+                """
+                # 画像をプロンプトに追加
+                for i, base64_str in enumerate(image_base64_list, 1):
+                    base_prompt += f"\n画像{i}: {base64_str}"
+
+                headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
+                data = {
+                    "model": model_name,
+                    "messages": [{"role": "user", "content": base_prompt}],
+                    "temperature": 0.3,
+                    "max_tokens": 1500  # 複数枚対応でトークン増
+                }
+                response = requests.post(API_URL, headers=headers, json=data)
+                if response.status_code == 200:
+                    full_response = response.json()["choices"][0]["message"]["content"].strip()
+                    # プロンプトを枚数分抽出
+                    prompts = re.split(r'\n\s*\n', full_response)  # 空行で分離
+                    for idx, prompt in enumerate(prompts):
+                        if idx < num_images:
+                            generated_prompts.append((uploaded_images[idx].name, prompt.strip()))
+                else:
+                    for uploaded_image in uploaded_images:
+                        generated_prompts.append((uploaded_image.name, f"エラー: {response.text[:100]}"))
 
             # 生成結果表示
             st.write("### 生成された画像プロンプト")
@@ -307,7 +317,6 @@ if st.button("生成開始"):
                     prompt = f"""
                     厳格に以下の指示で裏垢女子のツイートを1つ生成。
                     - 特徴: {features}
-                    - 身体特徴: {cup_size}カップ、{hair_style}、{'日本人女性' if is_japanese else '非日本人'}
                     {reference_prompt}
                     - 募集タイプ: {recruit_instruction}
                     - 日付考慮: {date_str}頃（{time_label}）
@@ -365,11 +374,10 @@ if st.button("生成開始"):
                             sexy_text = "fully clothed in everyday casual attire with no erotic elements, natural pose, no emphasis on body curves"
                         # photo_style修正: エロ度低め時体型強調除去
                         body_desc = "voluptuous curvy mature Japanese figure with large full breasts and thick thighs" if erotic_level > 4 else "average natural Japanese female figure"
-                        japanese_desc = "beautiful authentic Japanese woman with typical Japanese facial features (soft round face, almond-shaped eyes, fair smooth skin, straight black hair)" if is_japanese else "beautiful woman"
-                        photo_style = f"photorealistic, ultra high resolution, natural soft indoor lighting with warm tones, realistic skin texture with subtle natural glow, detailed eyes and hair, {body_desc}, {sexy_text}, style inspired by @BeaulieuEv74781's self-photos but original composition, no nudity, always fully clothed"
+                        photo_style = f"photorealistic, ultra high resolution, natural soft indoor lighting with warm tones, realistic Japanese skin texture with subtle natural glow, detailed almond-shaped eyes and straight black hair, {body_desc}, {sexy_text}, style inspired by @BeaulieuEv74781's self-photos but original composition, no nudity, always fully clothed"
                         image_prompt_prompt = f"""
                         このツイート '{tweet}' に連動したX投稿用画像の詳細なプロンプトを作成。
-                        - 必ず{ japanese_desc }として描写, {cup_size} cup bust, {hair_style} hair, age around 22-27
+                        - 必ず日本人女性として描写: beautiful authentic Japanese woman with typical Japanese facial features (soft round face, almond-shaped eyes, fair smooth skin, straight black hair), age around 35-45
                         - スタイル: {photo_style}
                         - 境界線上の暗示的エロさ（服着用だがボディラインが強調され、熟れた色気を感じさせる）
                         - 言語: {image_prompt_lang_text}
