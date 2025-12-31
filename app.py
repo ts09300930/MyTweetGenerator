@@ -68,6 +68,8 @@ if uploaded_csv is not None:
             image_prompt_lang = row["Image Prompt Lang"]
             mask_on = bool(row["Mask On"])
             mirror_selfie_mode = row.get("Mirror Selfie Mode", "顔が映る・スマホ映り込み")
+            sexy_mode = row.get("Sexy Mode", "谷間露出なし・微エロ")
+            atmosphere_only_mode = bool(row.get("Atmosphere Only Mode", False))
             custom_rule = row.get("Custom Rule", "")
             image_custom_prompt = row.get("Image Custom Prompt", "")
             st.success(f"{selected_char}の設定を復元しました")
@@ -101,9 +103,14 @@ fuzzy_mode = row2[1].checkbox("伏字モード", value=fuzzy_mode if 'fuzzy_mode
 ellipsis_end = row2[2].checkbox("末尾に。。や...を入れる", value=ellipsis_end if 'ellipsis_end' in locals() else True)
 dom_s_mode = row2[3].checkbox("ドSモード", value=dom_s_mode if 'dom_s_mode' in locals() else False)
 mirror_selfie_mode = row2[4].radio("鏡自撮りモード", ["オフ", "顔が映る・スマホ映り込み", "顔が映る・スマホ映らない", "顔が映らない・スマホ映らない"], index=["オフ", "顔が映る・スマホ映り込み", "顔が映る・スマホ映らない", "顔が映らない・スマホ映らない"].index(mirror_selfie_mode) if 'mirror_selfie_mode' in locals() else 1)
+
 generate_image_prompt = st.checkbox("ツイート連動画像プロンプトを作成", value=generate_image_prompt if 'generate_image_prompt' in locals() else True)
 image_prompt_lang = st.selectbox("プロンプト言語", ["English", "Japanese"], index=0 if ('image_prompt_lang' in locals() and image_prompt_lang == "English") else 1)
 mask_on = st.checkbox("白いマスク着用を追加", value=mask_on if 'mask_on' in locals() else True)
+
+# 新規追加: セクシーモードと雰囲気だけモード
+sexy_mode = st.radio("セクシーモード", ["オフ", "谷間露出なし・微エロ", "谷間あり・ややエロ"], index=["オフ", "谷間露出なし・微エロ", "谷間あり・ややエロ"].index(sexy_mode) if 'sexy_mode' in locals() else 1)
+atmosphere_only_mode = st.checkbox("雰囲気だけモード（口元だけ露出）", value=atmosphere_only_mode if 'atmosphere_only_mode' in locals() else False)
 
 # ルールを分離
 custom_rule = st.text_input("ツイートその他ルール（ツイート本文向け）", value=custom_rule if 'custom_rule' in locals() else "")
@@ -139,6 +146,8 @@ if st.button("現在の設定をCSVに追加保存"):
             "Image Prompt Lang": [image_prompt_lang],
             "Mask On": [mask_on],
             "Mirror Selfie Mode": [mirror_selfie_mode],
+            "Sexy Mode": [sexy_mode],
+            "Atmosphere Only Mode": [atmosphere_only_mode],
             "Custom Rule": [custom_rule],
             "Image Custom Prompt": [image_custom_prompt]
         }
@@ -279,11 +288,16 @@ if st.button("生成開始"):
                     tweets.append(tweet)
                     date_strings.append(f"{date_str} ({time_label})")
 
-                    # 画像プロンプト生成（日本人強調強化版）
+                    # 画像プロンプト生成（セクシーモード + 雰囲気だけモード対応 + リアル感強化）
                     image_prompt = ""
                     if generate_image_prompt:
                         image_prompt_lang_text = "English" if image_prompt_lang == "English" else "Japanese"
-                        mask_text = "wearing a white surgical face mask covering nose and mouth," if mask_on else ""
+                        # マスク処理（雰囲気だけモード時は口元だけ露出）
+                        if atmosphere_only_mode:
+                            mask_text = "wearing a white surgical face mask slightly pulled down to reveal mouth and chin only,"
+                        else:
+                            mask_text = "wearing a white surgical face mask covering nose and mouth," if mask_on else ""
+                        # 鏡自撮りモード
                         if mirror_selfie_mode == "顔が映る・スマホ映り込み":
                             mirror_text = "taking a mirror selfie in front of a mirror, holding iPhone smartphone with one hand, full body or upper body visible in reflection,"
                         elif mirror_selfie_mode == "顔が映る・スマホ映らない":
@@ -292,10 +306,17 @@ if st.button("生成開始"):
                             mirror_text = "mirror selfie in front of a mirror, face hidden or cropped, body visible, smartphone not in frame, anonymous style,"
                         else:
                             mirror_text = ""
-                        photo_style = "photorealistic, high resolution photo, natural indoor lighting with warm sensual tone, candid selfie style like taken with smartphone camera, realistic Japanese skin texture with subtle glow and slight sweat, detailed almond-shaped eyes and straight black hair, voluptuous curvy mature figure with large full breasts and wide hips, seductive subtle pose, slightly revealing casual clothing clinging to curves, style inspired by @BeaulieuEv74781's self-photos but original composition"
+                        # セクシーモード分岐
+                        if sexy_mode == "谷間露出なし・微エロ":
+                            sexy_text = "subtle micro-erotic atmosphere with no cleavage exposure, emphasizing thick thighs and slight panty peek under short skirt or shorts, clothing clinging to curves from sweat, natural seductive pose without direct exposure"
+                        elif sexy_mode == "谷間あり・ややエロ":
+                            sexy_text = "moderate erotic atmosphere with subtle cleavage exposure, large breasts emphasized by tight clothing, seductive pose with slight sweat and clinging fabric"
+                        else:
+                            sexy_text = "natural casual pose with minimal erotic elements"
+                        photo_style = "photorealistic, ultra high resolution, natural soft indoor lighting with warm tones, realistic Japanese skin texture with subtle natural glow and slight sweat, detailed almond-shaped eyes and straight black hair, voluptuous curvy mature Japanese figure with large full breasts and thick thighs, {sexy_text}, style inspired by @BeaulieuEv74781's self-photos but original composition"
                         image_prompt_prompt = f"""
                         このツイート '{tweet}' に連動したX投稿用画像の詳細なプロンプトを作成。
-                        - 必ず日本人女性として描写: beautiful Japanese mature woman with typical Japanese facial features (soft round face, almond-shaped eyes, fair skin, straight black hair), age around 35-45, large breast size
+                        - 必ず日本人女性として描写: beautiful authentic Japanese woman with typical Japanese facial features (soft round face, almond-shaped eyes, fair smooth skin, straight black hair), age around 35-45
                         - スタイル: {photo_style}
                         - 境界線上の暗示的エロさ（服着用だがボディラインが強調され、熟れた色気を感じさせる）
                         - 言語: {image_prompt_lang_text}
