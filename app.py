@@ -3,17 +3,13 @@ import datetime
 import pandas as pd
 import requests
 import io
-
 st.title("裏垢女子ツイート生成ツール")
-
 # APIキー管理
 if "GROK_API_KEY" in st.secrets:
     API_KEY = st.secrets["GROK_API_KEY"]
 else:
     API_KEY = st.text_input("Grok APIキー（ローカルテスト用）", type="password")
-
 API_URL = "https://api.x.ai/v1/chat/completions"
-
 # モデル選択
 model_options = [
     "grok-4-1-fast-reasoning (低コスト・推奨)",
@@ -23,7 +19,6 @@ model_options = [
 ]
 selected_model = st.selectbox("使用モデルを選択", model_options, index=0)
 model_name = selected_model.split(" (")[0]
-
 # 参考スタイルをデフォルトで常時入力（分析強化版）
 default_reference = """
 参考アカウントの書き方・フォーマットを厳守（内容は絶対にパクリせず、特徴に基づくオリジナルで生成）:
@@ -35,7 +30,6 @@ default_reference = """
 @nico_chan714: 貧乳コンプレックス、自己卑下（小さいけどいいですか？）、質問形式でエンゲージメント。
 DM単語避け、誘導は自然に。
 """
-
 # CSV読み込み機能（キャラ選択）
 uploaded_csv = st.file_uploader("保存したCSVからキャラ設定を読み込み", type=["csv"])
 if uploaded_csv is not None:
@@ -77,7 +71,6 @@ if uploaded_csv is not None:
         st.error(f"CSV読み込みエラー: {e}")
 else:
     selected_char = "新規作成"
-
 # UI入力（読み込み値またはデフォルト）
 features = st.text_area("裏垢女子の特徴を入力", value=features if 'features' in locals() else "", placeholder="例: 20代後半OL、欲求不満、エロティックな日常吐露", height=150)
 reference = st.text_area("参考スタイル（オプション）\nXアカウントURLや過去ツイート例を貼り付け", value=reference if 'reference' in locals() else default_reference, height=300)
@@ -103,19 +96,15 @@ fuzzy_mode = row2[1].checkbox("伏字モード", value=fuzzy_mode if 'fuzzy_mode
 ellipsis_end = row2[2].checkbox("末尾に。。や...を入れる", value=ellipsis_end if 'ellipsis_end' in locals() else True)
 dom_s_mode = row2[3].checkbox("ドSモード", value=dom_s_mode if 'dom_s_mode' in locals() else False)
 mirror_selfie_mode = row2[4].radio("鏡自撮りモード", ["オフ", "顔が映る・スマホ映り込み", "顔が映る・スマホ映らない", "顔が映らない・スマホ映らない"], index=["オフ", "顔が映る・スマホ映り込み", "顔が映る・スマホ映らない", "顔が映らない・スマホ映らない"].index(mirror_selfie_mode) if 'mirror_selfie_mode' in locals() else 1)
-
 generate_image_prompt = st.checkbox("ツイート連動画像プロンプトを作成", value=generate_image_prompt if 'generate_image_prompt' in locals() else True)
 image_prompt_lang = st.selectbox("プロンプト言語", ["English", "Japanese"], index=0 if ('image_prompt_lang' in locals() and image_prompt_lang == "English") else 1)
 mask_on = st.checkbox("白いマスク着用を追加", value=mask_on if 'mask_on' in locals() else True)
-
 # 新規追加: セクシーモードと雰囲気だけモード
 sexy_mode = st.radio("セクシーモード", ["オフ", "谷間露出なし・微エロ", "谷間あり・ややエロ"], index=["オフ", "谷間露出なし・微エロ", "谷間あり・ややエロ"].index(sexy_mode) if 'sexy_mode' in locals() else 1)
 atmosphere_only_mode = st.checkbox("雰囲気だけモード（口元だけ露出）", value=atmosphere_only_mode if 'atmosphere_only_mode' in locals() else False)
-
 # ルールを分離
 custom_rule = st.text_input("ツイートその他ルール（ツイート本文向け）", value=custom_rule if 'custom_rule' in locals() else "")
 image_custom_prompt = st.text_input("画像プロンプト追加指示（画像向け）", value=image_custom_prompt if 'image_custom_prompt' in locals() else "", placeholder="例: 夜の部屋背景、上半身のみ、笑顔、薄暗い照明")
-
 # キャラ設定CSV保存機能（追記対応 + 新規項目追加）
 st.subheader("キャラ設定保存")
 char_name_save = st.text_input("保存するキャラ名（新規または既存）")
@@ -162,7 +151,6 @@ if st.button("現在の設定をCSVに追加保存"):
         st.success("現在の設定をCSVに追加保存しました（ファイル名固定: characters_all.csv）。既存CSVとマージしてご利用ください")
     else:
         st.error("キャラ名を入力してください")
-
 # 生成開始
 if st.button("生成開始"):
     if not features or not API_KEY:
@@ -179,7 +167,6 @@ if st.button("生成開始"):
         if ellipsis_end: rule_text += "ツイートの末尾や文中に「。。」「...」「．．．」などを適度に使用して余韻や切なさを演出。"
         if dom_s_mode: rule_text += "ドSな口調で上から目線・言葉責め・煽りを積極的に使用（例: 「おじさんならどうするの？」「満足させられる人だけ来て」など）。"
         rule_text += custom_rule
-
         # エロ度指示（10段階細分化）
         if erotic_level <= 2:
             erotic_instruction = "エロティックさは極めて控えめ。性的表現は一切避け、孤独感や雰囲気の描写のみ。"
@@ -191,7 +178,6 @@ if st.button("生成開始"):
             erotic_instruction = "やや大胆なエロティック表現。指の動き、息遣い、具体的な部位の熱さなどの描写を積極的に。"
         else:
             erotic_instruction = "生々しく大胆なエロティック表現。具体的な感覚描写や行為の想像を強く含むが、センシティブ回避ルールを厳守。"
-
         # ツイート長指示（1: 2行程度 → 10: 8〜10行）
         if tweet_length <= 2:
             length_instruction = "ツイートは極短（80〜120文字、約2行）で簡潔に。"
@@ -203,7 +189,6 @@ if st.button("生成開始"):
             length_instruction = "ツイートは長め（200〜240文字、約7〜8行）で詳細に描写。"
         else:
             length_instruction = "ツイートは最大限長め（240〜280文字、約8〜10行）で詳細に描写。"
-
         # 重複禁止 + 奥行き強化指示（大幅強化版）
         variety_instruction = """
         すべてのツイートで内容、表現、シチュエーション、言い回し、感情描写を完全に多様化せよ。
@@ -212,7 +197,6 @@ if st.button("生成開始"):
         感情の起伏も変え（期待、苛立ち、後悔、罪悪感、興奮、切なさ、焦燥、陶酔など日替わり）。
         同じフレーズ・似た状況の繰り返しを絶対禁止。
         """
-
         # 質問形式頻度指示
         if question_frequency <= 3:
             question_instruction = "質問形式のツイートは稀に。"
@@ -220,7 +204,6 @@ if st.button("生成開始"):
             question_instruction = "質問形式のツイートを適度に混ぜる。"
         else:
             question_instruction = "ほとんどのツイートを質問形式にする。"
-
         # 自己卑下度指示
         if self_deprecation_level <= 3:
             deprecation_instruction = "自己卑下は控えめに。"
@@ -228,7 +211,6 @@ if st.button("生成開始"):
             deprecation_instruction = "適度に自己卑下やコンプレックスを表現。"
         else:
             deprecation_instruction = "強い自己卑下・コンプレックス強調で共感を誘う（例: 「私みたいなの相手してくれる？」）。"
-
         # 募集タイプ指示
         recruit_instruction = ""
         if recruit_type == "おじさん限定":
@@ -243,9 +225,7 @@ if st.button("生成開始"):
             recruit_instruction = "貧乳コンプレックスを強調（小さいけどいいですか？など）。"
         elif recruit_type == "カスタム" and custom_recruit:
             recruit_instruction = f"{custom_recruit}の募集ニュアンスを強調。"
-
         reference_prompt = f"参考スタイル: {reference}" if reference else ""
-
         with st.spinner(f"{days}日分（{days * tweets_per_day}ツイート）生成中..."):
             today = datetime.date.today()
             dates = [today - datetime.timedelta(days=i) for i in range(days)]
@@ -253,7 +233,6 @@ if st.button("生成開始"):
             date_strings = []
             tweets = []
             image_prompts = []
-
             for date in dates:
                 date_str = date.strftime("%Y-%m-%d")
                 for j in range(tweets_per_day):
@@ -287,7 +266,6 @@ if st.button("生成開始"):
                         tweet = f"エラー: {response.text[:100]}"
                     tweets.append(tweet)
                     date_strings.append(f"{date_str} ({time_label})")
-
                     # 画像プロンプト生成（セクシーモード + 雰囲気だけモード対応 + リアル感強化）
                     image_prompt = ""
                     if generate_image_prompt:
@@ -306,9 +284,9 @@ if st.button("生成開始"):
                             mirror_text = "mirror selfie in front of a mirror, face hidden or cropped, body visible, smartphone not in frame, anonymous style,"
                         else:
                             mirror_text = ""
-                        # セクシーモード分岐
+                        # セクシーモード分岐（修正版）
                         if sexy_mode == "谷間露出なし・微エロ":
-                            sexy_text = "subtle micro-erotic atmosphere with no cleavage exposure, emphasizing thick thighs and slight panty peek under short skirt or shorts, clothing clinging to curves from sweat, natural seductive pose without direct exposure"
+                            sexy_text = "very subtle and minimal erotic atmosphere, no cleavage exposure at all, fully covered chest with loose or high-neck clothing, emphasizing natural casual pose and soft curves gently, no tight clothing, no sweat clinging, no panty peek, modest everyday wear like t-shirt and pants"
                         elif sexy_mode == "谷間あり・ややエロ":
                             sexy_text = "moderate erotic atmosphere with subtle cleavage exposure, large breasts emphasized by tight clothing, seductive pose with slight sweat and clinging fabric"
                         else:
@@ -334,10 +312,8 @@ if st.button("生成開始"):
                         if response_image.status_code == 200:
                             image_prompt = response_image.json()["choices"][0]["message"]["content"].strip()
                     image_prompts.append(image_prompt)
-
             df = pd.DataFrame({"Date": date_strings, "Tweet": tweets, "Image Prompt": image_prompts})
             csv = df.to_csv(index=False).encode('utf-8')
             st.download_button("CSVダウンロード", csv, "tweets.csv", "text/csv")
             st.dataframe(df)
-
-st.info("生成時のみクレジット消費。初回は数円程度です。")
+st.info("生成時のみクレジット消費。初回は数円程度です.")
