@@ -192,11 +192,12 @@ if uploaded_images:
                     response_analysis = requests.post(API_URL, headers=headers, json=data_analysis)
                     if response_analysis.status_code == 200:
                         image_desc = response_analysis.json()["choices"][0]["message"]["content"].strip()
-                        # 特徴統合プロンプト - 画像記述を優先し、特徴を補助的に反映、日本人指定追加
+                        # 特徴統合プロンプト - 画像忠実優先を強化
                         integrated_prompt = f"""
                         画像記述: {image_desc}
                         特徴: {features}
-                        - 画像記述を基に忠実にプロンプトを作成し、特徴を追加的に反映（特徴は画像の核心を変えない範囲で統合）。
+                        - 画像の外見、服装、ポーズ、背景を厳格に忠実に再現した画像プロンプトを作成。
+                        - 特徴は画像と矛盾しない範囲でのみ軽く反映（画像の核心を変えない）。
                         - 必ず日本人女性として描写（典型的な日本人顔立ち: 柔らかい丸顔、アーモンド形の目、公平な肌、直黒髪など）。
                         - 言語: {'English' if image_prompt_lang == 'English' else 'Japanese'}
                         - 出力: プロンプト本文のみ
