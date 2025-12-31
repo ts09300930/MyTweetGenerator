@@ -68,6 +68,9 @@ if uploaded_csv is not None:
             atmosphere_only_mode = bool(row.get("Atmosphere Only Mode", False))
             custom_rule = row.get("Custom Rule", "")
             image_custom_prompt = row.get("Image Custom Prompt", "")
+            cup_size = row.get("Cup Size", "G")
+            hair_style = row.get("Hair Style", "金髪ロング")
+            is_japanese = bool(row.get("Is Japanese", True))
             st.success(f"{selected_char}の設定を復元しました")
     except Exception as e:
         st.error(f"CSV読み込みエラー: {e}")
@@ -127,7 +130,6 @@ cup_size = st.text_input("胸のカップ数 (例: G)", value=auto_cup)
 hair_style = st.text_input("髪型 (例: 金髪ロング)", value=auto_hair)
 age = st.text_input("年齢 (例: 22)", value=auto_age)
 is_japanese = st.checkbox("日本人女性として描写", value=auto_japanese)
-
 # キャラ設定CSV保存機能（追記対応 + 新規項目追加）
 st.subheader("キャラ設定保存")
 char_name_save = st.text_input("保存するキャラ名（新規または既存）")
@@ -194,8 +196,8 @@ if uploaded_images:
             st.image(uploaded_image, caption=uploaded_image.name, use_column_width=True)
 
     if st.button("複数画像からプロンプト生成"):
-        if not API_KEY:
-            st.error("APIキーを入力してください")
+        if not features or not API_KEY:
+            st.error("特徴とAPIキーを入力してください")
         else:
             generated_prompts = []
             with st.spinner("画像を分析・プロンプト生成中..."):
@@ -226,8 +228,6 @@ if uploaded_images:
                     for idx, prompt in enumerate(prompts):
                         if idx < num_images:
                             generated_prompts.append((uploaded_images[idx].name, prompt))
-                        else:
-                            break
                 else:
                     for uploaded_image in uploaded_images:
                         generated_prompts.append((uploaded_image.name, f"エラー: {response.text[:100]}"))
@@ -237,6 +237,46 @@ if uploaded_images:
             for filename, prompt in generated_prompts:
                 with st.expander(f"{filename} のプロンプト"):
                     st.text_area(f"{filename}", prompt, height=200, key=filename)
+
+# 新機能: Grokとの会話モード (画像アップロード後)
+st.subheader("Grokとの会話モード (画像付きプロンプト生成)")
+uploaded_chat_image = st.file_uploader("会話モード用画像をアップロード", type=["jpg", "png", "jpeg"])
+if uploaded_chat_image:
+    mime_type = uploaded_chat_image.type or "image/jpeg"
+    image_base64 = base64.b64encode(uploaded_chat_image.getvalue()).decode('utf-8')
+    st.image(uploaded_chat_image, caption="アップロードされた画像", use_column_width=True)
+    # 会話履歴の初期化
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+
+    if prompt := st.chat_input("Grokに質問（画像付き）"):
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.markdown(prompt)
+
+        full_prompt = f"""
+        {prompt}
+        画像: data:{mime_type};base64,{image_base64}
+        """
+        headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
+        data = {
+            "model": model_name,
+            "messages": [{"role": "user", "content": full_prompt}],
+            "temperature": 0.7,
+            "max_tokens": 500
+        }
+        response = requests.post(API_URL, headers=headers, json=data)
+        if response.status_code == 200:
+            assistant_response = response.json()["choices"][0]["message"]["content"].strip()
+            st.session_state.messages.append({"role": "assistant", "content": assistant_response})
+            with st.chat_message("assistant"):
+                st.markdown(assistant_response)
+        else:
+            st.error(f"エラー: {response.text[:100]}")
 
 # 生成開始
 if st.button("生成開始"):
@@ -327,7 +367,7 @@ if st.button("生成開始"):
                     prompt = f"""
                     厳格に以下の指示で裏垢女子のツイートを1つ生成。
                     - 特徴: {features}
-                    - 身体特徴: {cup_size}カップ、{hair_style}、{'日本人女性' if is_japanese else '非日本人'}、{age}歳
+                    - 身体特徴: {cup_size}カップ、{hair_style}、{'日本人女性' if is_japanese else '非日本人'}
                     {reference_prompt}
                     - 募集タイプ: {recruit_instruction}
                     - 日付考慮: {date_str}頃（{time_label}）
