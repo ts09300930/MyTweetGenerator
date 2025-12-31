@@ -60,6 +60,8 @@ if uploaded_csv is not None:
             ellipsis_end = bool(row["Ellipsis End"])
             dom_s_mode = bool(row["Dom S Mode"])
             custom_rule = row.get("Custom Rule", "")
+            poll_mode = bool(row.get("Poll Mode", False))
+            poll_interval = int(row.get("Poll Interval", 3))
             st.success(f"{selected_char}の設定を復元しました")
     except Exception as e:
         st.error(f"CSV読み込みエラー: {e}")
@@ -89,6 +91,12 @@ sensitive_avoid = row2[0].checkbox("センシティブ回避（暗示表現）",
 fuzzy_mode = row2[1].checkbox("伏字モード", value=fuzzy_mode if 'fuzzy_mode' in locals() else False)
 ellipsis_end = row2[2].checkbox("末尾に。。や...を入れる", value=ellipsis_end if 'ellipsis_end' in locals() else True)
 dom_s_mode = row2[3].checkbox("ドSモード", value=dom_s_mode if 'dom_s_mode' in locals() else False)
+# 新機能: 2択ポールモード追加
+poll_mode = st.checkbox("2択ポールツイートを挿入", value=poll_mode if 'poll_mode' in locals() else False)
+if poll_mode:
+    poll_interval = st.slider("ポールツイート挿入間隔（日）", 1, 10, poll_interval if 'poll_interval' in locals() else 3, help="何日ごとに1回2択ポールツイートを挿入するか")
+else:
+    poll_interval = 3  # デフォルト（使用しない場合無視）
 # ルールを分離
 custom_rule = st.text_input("ツイートその他ルール（ツイート本文向け）", value=custom_rule if 'custom_rule' in locals() else "")
 # キャラ設定CSV保存機能（追記対応 + 新規項目追加）
@@ -117,7 +125,9 @@ if st.button("現在の設定をCSVに追加保存"):
             "Fuzzy Mode": [fuzzy_mode],
             "Ellipsis End": [ellipsis_end],
             "Dom S Mode": [dom_s_mode],
-            "Custom Rule": [custom_rule]
+            "Custom Rule": [custom_rule],
+            "Poll Mode": [poll_mode],
+            "Poll Interval": [poll_interval]
         }
         df_new = pd.DataFrame(new_data)
         csv_new = df_new.to_csv(index=False).encode('utf-8')
@@ -207,13 +217,20 @@ if st.button("生成開始"):
         reference_prompt = f"参考スタイル: {reference}" if reference else ""
         with st.spinner(f"{days}日分（{days * tweets_per_day}ツイート）生成中..."):
             today = datetime.date.today()
-            dates = [today + datetime.timedelta(days=i) for i in range(days)]  # 今日から未来へ（今日を含む）
+            dates = [today + datetime.timedelta(days=i) for i in range(days)]  # 今日から未来へ
             date_strings = []
             tweets = []
-            for date in dates:
+            poll_days = set(range(0, days, poll_interval)) if poll_mode else set()  # ポール挿入日
+            for day_idx, date in enumerate(dates):
                 date_str = date.strftime("%Y-%m-%d")
                 for j in range(tweets_per_day):
                     time_label = f"投稿{j+1}"
+                    is_poll_day = day_idx in poll_days and j == 0  # 1日目の最初のツイートをポールにする
+                    poll_instruction = """
+                    このツイートは2択ポール形式で作成。質問文を最初に書き、1. と2. で選択肢を提示。最後に「どっち？」や「どうですか？」で締める。
+                    選択肢はエロティックな2択（例: 1. アリ 2. なし。ズボン履け）。
+                    ポール形式のツイートのみ生成。
+                    """ if is_poll_day else ""
                     prompt = f"""
                     厳格に以下の指示で裏垢女子のツイートを1つ生成。
                     - 特徴: {features}
@@ -226,6 +243,7 @@ if st.button("生成開始"):
                     - 質問形式: {question_instruction}
                     - 自己卑下: {deprecation_instruction}
                     - 奥行き・多様性: {variety_instruction}
+                    {poll_instruction}
                     - 280文字以内、フィクション、秘密めいた内容
                     - 出力: ツイート本文のみ
                     """
