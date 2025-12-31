@@ -279,7 +279,7 @@ if st.button("生成開始"):
                     tweets.append(tweet)
                     date_strings.append(f"{date_str} ({time_label})")
 
-                    # 画像プロンプト生成（豊満さ・セクシー強化版）
+                    # 画像プロンプト生成（日本人強調強化版）
                     image_prompt = ""
                     if generate_image_prompt:
                         image_prompt_lang_text = "English" if image_prompt_lang == "English" else "Japanese"
@@ -292,13 +292,14 @@ if st.button("生成開始"):
                             mirror_text = "mirror selfie in front of a mirror, face hidden or cropped, body visible, smartphone not in frame, anonymous style,"
                         else:
                             mirror_text = ""
-                        photo_style = "photorealistic, high resolution photo, natural indoor lighting with warm sensual tone, candid selfie style like taken with smartphone camera, realistic skin texture with slight sweat, detailed eyes and hair, voluptuous curvy figure, emphasized large bust and hips, seductive subtle pose, slightly revealing outfit, style inspired by @BeaulieuEv74781's self-photos but original composition"
+                        photo_style = "photorealistic, high resolution photo, natural indoor lighting with warm sensual tone, candid selfie style like taken with smartphone camera, realistic Japanese skin texture with subtle glow and slight sweat, detailed almond-shaped eyes and straight black hair, voluptuous curvy mature figure with large full breasts and wide hips, seductive subtle pose, slightly revealing casual clothing clinging to curves, style inspired by @BeaulieuEv74781's self-photos but original composition"
                         image_prompt_prompt = f"""
                         このツイート '{tweet}' に連動したX投稿用画像の詳細なプロンプトを作成。
+                        - 必ず日本人女性として描写: beautiful Japanese mature woman with typical Japanese facial features (soft round face, almond-shaped eyes, fair skin, straight black hair), age around 35-45, large breast size
                         - スタイル: {photo_style}
-                        - 境界線上の暗示的エロさ（服着用だがボディラインが強調され、色気を感じさせる）
+                        - 境界線上の暗示的エロさ（服着用だがボディラインが強調され、熟れた色気を感じさせる）
                         - 言語: {image_prompt_lang_text}
-                        - 必ず含む: Japanese woman, age (estimated from {features}), large breast size, {mask_text}{mirror_text}
+                        - 必ず含む: {mask_text}{mirror_text}
                         - 追加指示: {image_custom_prompt}
                         - 出力: プロンプト本文のみ
                         """
