@@ -67,6 +67,9 @@ if uploaded_csv is not None:
             atmosphere_only_mode = bool(row.get("Atmosphere Only Mode", False))
             custom_rule = row.get("Custom Rule", "")
             image_custom_prompt = row.get("Image Custom Prompt", "")
+            cup_size = row.get("Cup Size", "G")
+            hair_style = row.get("Hair Style", "金髪ロング")
+            is_japanese = bool(row.get("Is Japanese", True))
             st.success(f"{selected_char}の設定を復元しました")
     except Exception as e:
         st.error(f"CSV読み込みエラー: {e}")
@@ -106,6 +109,11 @@ atmosphere_only_mode = st.checkbox("雰囲気だけモード（口元だけ露�
 # ルールを分離
 custom_rule = st.text_input("ツイートその他ルール（ツイート本文向け）", value=custom_rule if 'custom_rule' in locals() else "")
 image_custom_prompt = st.text_input("画像プロンプト追加指示（画像向け）", value=image_custom_prompt if 'image_custom_prompt' in locals() else "", placeholder="例: 夜の部屋背景、上半身のみ、笑顔、薄暗い照明")
+# 身体特徴設定（別枠）
+st.subheader("身体特徴設定")
+cup_size = st.text_input("胸のカップ数 (例: G)", value=cup_size if 'cup_size' in locals() else "G")
+hair_style = st.text_input("髪型 (例: 金髪ロング)", value=hair_style if 'hair_style' in locals() else "金髪ロング")
+is_japanese = st.checkbox("日本人女性として描写", value=is_japanese if 'is_japanese' in locals() else True)
 # キャラ設定CSV保存機能（追記対応 + 新規項目追加）
 st.subheader("キャラ設定保存")
 char_name_save = st.text_input("保存するキャラ名（新規または既存）")
@@ -139,7 +147,10 @@ if st.button("現在の設定をCSVに追加保存"):
             "Sexy Mode": [sexy_mode],
             "Atmosphere Only Mode": [atmosphere_only_mode],
             "Custom Rule": [custom_rule],
-            "Image Custom Prompt": [image_custom_prompt]
+            "Image Custom Prompt": [image_custom_prompt],
+            "Cup Size": [cup_size],
+            "Hair Style": [hair_style],
+            "Is Japanese": [is_japanese]
         }
         df_new = pd.DataFrame(new_data)
         csv_new = df_new.to_csv(index=False).encode('utf-8')
@@ -152,7 +163,7 @@ if st.button("現在の設定をCSVに追加保存"):
         st.success("現在の設定をCSVに追加保存しました（ファイル名固定: characters_all.csv）。既存CSVとマージしてご利用ください")
     else:
         st.error("キャラ名を入力してください")
-# 新機能: 画像アップロードでプロンプト生成（ツイート独立） - 画像忠実再現最終版（統合廃止）
+# 新機能: 画像アップロードでプロンプト生成（ツイート独立） - 複数画像対応 + プレビュー追加 + 画像忠実再現最終版（統合廃止）
 st.subheader("画像アップロードでプロンプト生成（ツイート独立）")
 uploaded_images = st.file_uploader(
     "画像を複数アップロード（ツイート特徴を反映したプロンプト生成）",
@@ -183,6 +194,8 @@ if uploaded_images:
                     - 人物の外見、服装、ポーズ、表情、体型、髪型、背景、光の当たり方、すべてを正確に記述。
                     - photorealistic, ultra high resolution, detailed texture, natural lighting などの品質向上キーワードを追加。
                     - 追加の特徴や変更は一切せず、画像を100%忠実に再現。
+                    - {'A {cup_size} cup bust, {hair_style} hair' if cup_size or hair_style else ''}
+                    - {'A Japanese woman with typical Japanese facial features' if is_japanese else ''}
                     - 出力: プロンプト本文のみ
                     """
                     headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
@@ -294,6 +307,7 @@ if st.button("生成開始"):
                     prompt = f"""
                     厳格に以下の指示で裏垢女子のツイートを1つ生成。
                     - 特徴: {features}
+                    - 身体特徴: {cup_size}カップ、{hair_style}、{'日本人女性' if is_japanese else '非日本人'}
                     {reference_prompt}
                     - 募集タイプ: {recruit_instruction}
                     - 日付考慮: {date_str}頃（{time_label}）
@@ -351,10 +365,11 @@ if st.button("生成開始"):
                             sexy_text = "fully clothed in everyday casual attire with no erotic elements, natural pose, no emphasis on body curves"
                         # photo_style修正: エロ度低め時体型強調除去
                         body_desc = "voluptuous curvy mature Japanese figure with large full breasts and thick thighs" if erotic_level > 4 else "average natural Japanese female figure"
-                        photo_style = f"photorealistic, ultra high resolution, natural soft indoor lighting with warm tones, realistic Japanese skin texture with subtle natural glow, detailed almond-shaped eyes and straight black hair, {body_desc}, {sexy_text}, style inspired by @BeaulieuEv74781's self-photos but original composition, no nudity, always fully clothed"
+                        japanese_desc = "beautiful authentic Japanese woman with typical Japanese facial features (soft round face, almond-shaped eyes, fair smooth skin, straight black hair)" if is_japanese else "beautiful woman"
+                        photo_style = f"photorealistic, ultra high resolution, natural soft indoor lighting with warm tones, realistic skin texture with subtle natural glow, detailed eyes and hair, {body_desc}, {sexy_text}, style inspired by @BeaulieuEv74781's self-photos but original composition, no nudity, always fully clothed"
                         image_prompt_prompt = f"""
                         このツイート '{tweet}' に連動したX投稿用画像の詳細なプロンプトを作成。
-                        - 必ず日本人女性として描写: beautiful authentic Japanese woman with typical Japanese facial features (soft round face, almond-shaped eyes, fair smooth skin, straight black hair), age around 35-45
+                        - 必ず{ japanese_desc }として描写, {cup_size} cup bust, {hair_style} hair, age around 22-27
                         - スタイル: {photo_style}
                         - 境界線上の暗示的エロさ（服着用だがボディラインが強調され、熟れた色気を感じさせる）
                         - 言語: {image_prompt_lang_text}
