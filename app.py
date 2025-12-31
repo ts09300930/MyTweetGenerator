@@ -207,8 +207,7 @@ if st.button("生成開始"):
         reference_prompt = f"参考スタイル: {reference}" if reference else ""
         with st.spinner(f"{days}日分（{days * tweets_per_day}ツイート）生成中..."):
             today = datetime.date.today()
-            dates = [today - datetime.timedelta(days=i) for i in range(days)]
-            dates.reverse()
+            dates = [today + datetime.timedelta(days=i) for i in range(days)]  # 今日から未来へ（今日を含む）
             date_strings = []
             tweets = []
             for date in dates:
