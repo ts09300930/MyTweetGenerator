@@ -152,7 +152,7 @@ if st.button("現在の設定をCSVに追加保存"):
         st.success("現在の設定をCSVに追加保存しました（ファイル名固定: characters_all.csv）。既存CSVとマージしてご利用ください")
     else:
         st.error("キャラ名を入力してください")
-# 新機能: 画像アップロードでプロンプト生成（ツイート独立） - 複数画像対応 + プレビュー追加 + 日本人指定強化 + 画像忠実優先修正
+# 新機能: 画像アップロードでプロンプト生成（ツイート独立） - 複数画像対応 + プレビュー追加 + 画像忠実優先最終修正
 st.subheader("画像アップロードでプロンプト生成（ツイート独立）")
 uploaded_images = st.file_uploader(
     "画像を複数アップロード（ツイート特徴を反映したプロンプト生成）",
@@ -179,34 +179,34 @@ if uploaded_images:
                     image_base64 = base64.b64encode(uploaded_image.getvalue()).decode('utf-8')
                     image_analysis_prompt = f"""
                     この画像を分析: data:{mime_type};base64,{image_base64}
-                    - 詳細記述: 人物の外見、服装、ポーズ、背景を忠実に記述。
+                    - 詳細記述: 人物の外見、服装、ポーズ、背景、光の当たり方、表情を可能な限り忠実に記述。
                     - 出力: 記述本文のみ
                     """
                     headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
                     data_analysis = {
                         "model": model_name,
                         "messages": [{"role": "user", "content": image_analysis_prompt}],
-                        "temperature": 0.8,
-                        "max_tokens": 300
+                        "temperature": 0.5,  # 忠実性を高めるため温度を低く
+                        "max_tokens": 400
                     }
                     response_analysis = requests.post(API_URL, headers=headers, json=data_analysis)
                     if response_analysis.status_code == 200:
                         image_desc = response_analysis.json()["choices"][0]["message"]["content"].strip()
-                        # 特徴統合プロンプト - 画像忠実優先を強化
+                        # 特徴統合プロンプト - 画像を絶対優先、特徴は最小限
                         integrated_prompt = f"""
-                        画像記述: {image_desc}
-                        特徴: {features}
-                        - 画像の外見、服装、ポーズ、背景を厳格に忠実に再現した画像プロンプトを作成。
-                        - 特徴は画像と矛盾しない範囲でのみ軽く反映（画像の核心を変えない）。
-                        - 必ず日本人女性として描写（典型的な日本人顔立ち: 柔らかい丸顔、アーモンド形の目、公平な肌、直黒髪など）。
+                        元の画像の詳細な記述: {image_desc}
+                        追加の特徴（任意で軽く反映）: {features}
+                        - 上記の画像記述を基に、画像を可能な限り忠実に再現した詳細な画像生成プロンプトを作成。
+                        - 画像の服装、ポーズ、背景、表情、体型を絶対に変更せず、そのまま使用。
+                        - 特徴は画像と矛盾しない場合のみ最小限で追加。
                         - 言語: {'English' if image_prompt_lang == 'English' else 'Japanese'}
                         - 出力: プロンプト本文のみ
                         """
                         data_integrated = {
                             "model": model_name,
                             "messages": [{"role": "user", "content": integrated_prompt}],
-                            "temperature": 0.8,
-                            "max_tokens": 200
+                            "temperature": 0.5,  # 安定性を優先
+                            "max_tokens": 250
                         }
                         response_integrated = requests.post(API_URL, headers=headers, json=data_integrated)
                         if response_integrated.status_code == 200:
