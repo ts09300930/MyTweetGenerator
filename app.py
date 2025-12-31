@@ -3,6 +3,7 @@ import datetime
 import pandas as pd
 import requests
 import io
+import base64
 st.title("裏垢女子ツイート生成ツール")
 # APIキー管理
 if "GROK_API_KEY" in st.secrets:
@@ -151,6 +152,50 @@ if st.button("現在の設定をCSVに追加保存"):
         st.success("現在の設定をCSVに追加保存しました（ファイル名固定: characters_all.csv）。既存CSVとマージしてご利用ください")
     else:
         st.error("キャラ名を入力してください")
+# 新機能: 画像アップロードでプロンプト生成（ツイート独立）
+st.subheader("画像アップロードでプロンプト生成（ツイート独立）")
+uploaded_image = st.file_uploader("画像をアップロード（ツイート特徴を反映したプロンプト生成）", type=["jpg", "png", "jpeg"])
+if uploaded_image is not None:
+    image_base64 = base64.b64encode(uploaded_image.getvalue()).decode('utf-8')
+    if st.button("画像プロンプト生成"):
+        if not features or not API_KEY:
+            st.error("特徴とAPIキーを入力してください")
+        else:
+            image_analysis_prompt = f"""
+            この画像を分析: data:image/jpeg;base64,{image_base64}
+            - 詳細記述: 人物の外見、服装、ポーズ、背景を忠実に記述。
+            - 出力: 記述本文のみ
+            """
+            headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
+            data_analysis = {
+                "model": model_name,
+                "messages": [{"role": "user", "content": image_analysis_prompt}],
+                "temperature": 0.8,
+                "max_tokens": 300
+            }
+            response_analysis = requests.post(API_URL, headers=headers, json=data_analysis)
+            if response_analysis.status_code == 200:
+                image_desc = response_analysis.json()["choices"][0]["message"]["content"].strip()
+                # 特徴統合プロンプト
+                integrated_prompt = f"""
+                画像記述: {image_desc}
+                特徴: {features}
+                - 忠実に再現しつつ、特徴を統合した画像プロンプトを作成。
+                - 言語: {image_prompt_lang_text if 'image_prompt_lang' in locals() else 'English'}
+                - 出力: プロンプト本文のみ
+                """
+                data_integrated = {
+                    "model": model_name,
+                    "messages": [{"role": "user", "content": integrated_prompt}],
+                    "temperature": 0.8,
+                    "max_tokens": 200
+                }
+                response_integrated = requests.post(API_URL, headers=headers, json=data_integrated)
+                if response_integrated.status_code == 200:
+                    new_image_prompt = response_integrated.json()["choices"][0]["message"]["content"].strip()
+                    st.text_area("生成された画像プロンプト", new_image_prompt)
+            else:
+                st.error("画像分析エラー")
 # 生成開始
 if st.button("生成開始"):
     if not features or not API_KEY:
@@ -270,12 +315,14 @@ if st.button("生成開始"):
                     image_prompt = ""
                     if generate_image_prompt:
                         image_prompt_lang_text = "English" if image_prompt_lang == "English" else "Japanese"
-                        # マスク処理（雰囲気だけモード時は口元だけ露出）
-                        if atmosphere_only_mode:
-                            mask_text = "wearing a white surgical face mask slightly pulled down to reveal mouth and chin only,"
-                        else:
-                            mask_text = "wearing a white surgical face mask covering nose and mouth," if mask_on else ""
-                        # 鏡自撮りモード
+                        # マスク処理（雰囲気だけモード時は口元だけ露出） - 修正: mask_onオフ時は強制的に空
+                        mask_text = ""
+                        if mask_on:
+                            if atmosphere_only_mode:
+                                mask_text = "wearing a white surgical face mask slightly pulled down to reveal mouth and chin only, face partially obscured to show atmosphere only,"
+                            else:
+                                mask_text = "wearing a white surgical face mask covering nose and mouth,"
+                        # 鏡自撮りモード - 修正: 雰囲気モードオン時顔隠し強化
                         if mirror_selfie_mode == "顔が映る・スマホ映り込み":
                             mirror_text = "taking a mirror selfie in front of a mirror, holding iPhone smartphone with one hand, full body or upper body visible in reflection,"
                         elif mirror_selfie_mode == "顔が映る・スマホ映らない":
@@ -284,14 +331,18 @@ if st.button("生成開始"):
                             mirror_text = "mirror selfie in front of a mirror, face hidden or cropped, body visible, smartphone not in frame, anonymous style,"
                         else:
                             mirror_text = ""
-                        # セクシーモード分岐（修正版）
+                        if atmosphere_only_mode:
+                            mirror_text += " face mostly hidden to emphasize atmosphere,"
+                        # セクシーモード分岐（修正版） - 露出厳格制御
                         if sexy_mode == "谷間露出なし・微エロ":
-                            sexy_text = "very subtle and minimal erotic atmosphere, no cleavage exposure at all, fully covered chest with loose or high-neck clothing, emphasizing natural casual pose and soft curves gently, no tight clothing, no sweat clinging, no panty peek, modest everyday wear like t-shirt and pants"
+                            sexy_text = "very subtle and minimal erotic atmosphere, no cleavage exposure at all, fully covered chest with loose high-neck clothing, no tight fits, no sweat or clinging, no skin exposure below neck, modest casual wear like long-sleeve t-shirt and pants, natural relaxed pose"
                         elif sexy_mode == "谷間あり・ややエロ":
-                            sexy_text = "moderate erotic atmosphere with subtle cleavage exposure, large breasts emphasized by tight clothing, seductive pose with slight sweat and clinging fabric"
+                            sexy_text = "moderate erotic atmosphere with subtle cleavage exposure, breasts emphasized by fitted clothing, seductive pose with light sweat"
                         else:
-                            sexy_text = "natural casual pose with minimal erotic elements"
-                        photo_style = "photorealistic, ultra high resolution, natural soft indoor lighting with warm tones, realistic Japanese skin texture with subtle natural glow and slight sweat, detailed almond-shaped eyes and straight black hair, voluptuous curvy mature Japanese figure with large full breasts and thick thighs, {sexy_text}, style inspired by @BeaulieuEv74781's self-photos but original composition"
+                            sexy_text = "fully clothed in everyday casual attire with no erotic elements, natural pose, no emphasis on body curves"
+                        # photo_style修正: エロ度低め時体型強調除去
+                        body_desc = "voluptuous curvy mature Japanese figure with large full breasts and thick thighs" if erotic_level > 4 else "average natural Japanese female figure"
+                        photo_style = f"photorealistic, ultra high resolution, natural soft indoor lighting with warm tones, realistic Japanese skin texture with subtle natural glow, detailed almond-shaped eyes and straight black hair, {body_desc}, {sexy_text}, style inspired by @BeaulieuEv74781's self-photos but original composition, no nudity, always fully clothed"
                         image_prompt_prompt = f"""
                         このツイート '{tweet}' に連動したX投稿用画像の詳細なプロンプトを作成。
                         - 必ず日本人女性として描写: beautiful authentic Japanese woman with typical Japanese facial features (soft round face, almond-shaped eyes, fair smooth skin, straight black hair), age around 35-45
@@ -316,4 +367,4 @@ if st.button("生成開始"):
             csv = df.to_csv(index=False).encode('utf-8')
             st.download_button("CSVダウンロード", csv, "tweets.csv", "text/csv")
             st.dataframe(df)
-st.info("生成時のみクレジット消費。初回は数円程度です.")
+st.info("生成時のみクレジット消費。初回は数円程度です。")
