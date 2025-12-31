@@ -67,6 +67,7 @@ if uploaded_csv is not None:
             generate_image_prompt = bool(row["Generate Image Prompt"])
             image_prompt_lang = row["Image Prompt Lang"]
             mask_on = bool(row["Mask On"])
+            mirror_selfie_mode = row.get("Mirror Selfie Mode", "顔が映る・スマホ映り込み")
             custom_rule = row.get("Custom Rule", "")
             image_custom_prompt = row.get("Image Custom Prompt", "")
             st.success(f"{selected_char}の設定を復元しました")
@@ -100,7 +101,6 @@ fuzzy_mode = row2[1].checkbox("伏字モード", value=fuzzy_mode if 'fuzzy_mode
 ellipsis_end = row2[2].checkbox("末尾に。。や...を入れる", value=ellipsis_end if 'ellipsis_end' in locals() else True)
 dom_s_mode = row2[3].checkbox("ドSモード", value=dom_s_mode if 'dom_s_mode' in locals() else False)
 mirror_selfie_mode = row2[4].radio("鏡自撮りモード", ["オフ", "顔が映る・スマホ映り込み", "顔が映る・スマホ映らない", "顔が映らない・スマホ映らない"], index=["オフ", "顔が映る・スマホ映り込み", "顔が映る・スマホ映らない", "顔が映らない・スマホ映らない"].index(mirror_selfie_mode) if 'mirror_selfie_mode' in locals() else 1)
-
 generate_image_prompt = st.checkbox("ツイート連動画像プロンプトを作成", value=generate_image_prompt if 'generate_image_prompt' in locals() else True)
 image_prompt_lang = st.selectbox("プロンプト言語", ["English", "Japanese"], index=0 if ('image_prompt_lang' in locals() and image_prompt_lang == "English") else 1)
 mask_on = st.checkbox("白いマスク着用を追加", value=mask_on if 'mask_on' in locals() else True)
@@ -279,7 +279,7 @@ if st.button("生成開始"):
                     tweets.append(tweet)
                     date_strings.append(f"{date_str} ({time_label})")
 
-                    # 画像プロンプト生成（@BeaulieuEv74781参考 + 鏡自撮りモード対応）
+                    # 画像プロンプト生成（豊満さ・セクシー強化版）
                     image_prompt = ""
                     if generate_image_prompt:
                         image_prompt_lang_text = "English" if image_prompt_lang == "English" else "Japanese"
@@ -292,13 +292,13 @@ if st.button("生成開始"):
                             mirror_text = "mirror selfie in front of a mirror, face hidden or cropped, body visible, smartphone not in frame, anonymous style,"
                         else:
                             mirror_text = ""
-                        photo_style = "photorealistic, high resolution photo, natural indoor lighting, candid selfie style like taken with smartphone camera, realistic skin texture, detailed eyes and hair, style inspired by @BeaulieuEv74781's self-photos but original composition"
+                        photo_style = "photorealistic, high resolution photo, natural indoor lighting with warm sensual tone, candid selfie style like taken with smartphone camera, realistic skin texture with slight sweat, detailed eyes and hair, voluptuous curvy figure, emphasized large bust and hips, seductive subtle pose, slightly revealing outfit, style inspired by @BeaulieuEv74781's self-photos but original composition"
                         image_prompt_prompt = f"""
                         このツイート '{tweet}' に連動したX投稿用画像の詳細なプロンプトを作成。
                         - スタイル: {photo_style}
-                        - Twitterセンシティブに引っかからない程度のエロさ（暗示的、服着用、雰囲気重視）
+                        - 境界線上の暗示的エロさ（服着用だがボディラインが強調され、色気を感じさせる）
                         - 言語: {image_prompt_lang_text}
-                        - 必ず含む: Japanese woman, age (estimated from {features}), breast size (estimated from {features}), {mask_text}{mirror_text}
+                        - 必ず含む: Japanese woman, age (estimated from {features}), large breast size, {mask_text}{mirror_text}
                         - 追加指示: {image_custom_prompt}
                         - 出力: プロンプト本文のみ
                         """
