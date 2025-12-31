@@ -152,7 +152,7 @@ if st.button("現在の設定をCSVに追加保存"):
         st.success("現在の設定をCSVに追加保存しました（ファイル名固定: characters_all.csv）。既存CSVとマージしてご利用ください")
     else:
         st.error("キャラ名を入力してください")
-# 新機能: 画像アップロードでプロンプト生成（ツイート独立） - 複数画像対応 + プレビュー追加 + 日本人指定強化
+# 新機能: 画像アップロードでプロンプト生成（ツイート独立） - 複数画像対応 + プレビュー追加 + 日本人指定強化 + 画像忠実優先修正
 st.subheader("画像アップロードでプロンプト生成（ツイート独立）")
 uploaded_images = st.file_uploader(
     "画像を複数アップロード（ツイート特徴を反映したプロンプト生成）",
@@ -192,11 +192,11 @@ if uploaded_images:
                     response_analysis = requests.post(API_URL, headers=headers, json=data_analysis)
                     if response_analysis.status_code == 200:
                         image_desc = response_analysis.json()["choices"][0]["message"]["content"].strip()
-                        # 特徴統合プロンプト - 日本人女性指定を強制追加
+                        # 特徴統合プロンプト - 画像記述を優先し、特徴を補助的に反映、日本人指定追加
                         integrated_prompt = f"""
                         画像記述: {image_desc}
                         特徴: {features}
-                        - 忠実に再現しつつ、特徴を統合した画像プロンプトを作成。
+                        - 画像記述を基に忠実にプロンプトを作成し、特徴を追加的に反映（特徴は画像の核心を変えない範囲で統合）。
                         - 必ず日本人女性として描写（典型的な日本人顔立ち: 柔らかい丸顔、アーモンド形の目、公平な肌、直黒髪など）。
                         - 言語: {'English' if image_prompt_lang == 'English' else 'Japanese'}
                         - 出力: プロンプト本文のみ
