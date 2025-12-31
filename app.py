@@ -152,7 +152,7 @@ if st.button("現在の設定をCSVに追加保存"):
         st.success("現在の設定をCSVに追加保存しました（ファイル名固定: characters_all.csv）。既存CSVとマージしてご利用ください")
     else:
         st.error("キャラ名を入力してください")
-# 新機能: 画像アップロードでプロンプト生成（ツイート独立） - 複数画像対応 + プレビュー追加
+# 新機能: 画像アップロードでプロンプト生成（ツイート独立） - 複数画像対応 + プレビュー追加 + 日本人指定強化
 st.subheader("画像アップロードでプロンプト生成（ツイート独立）")
 uploaded_images = st.file_uploader(
     "画像を複数アップロード（ツイート特徴を反映したプロンプト生成）",
@@ -174,9 +174,11 @@ if uploaded_images:
             generated_prompts = []
             with st.spinner("画像を分析・プロンプト生成中..."):
                 for uploaded_image in uploaded_images:
+                    # 動的に MIMEタイプを判定
+                    mime_type = uploaded_image.type or "image/jpeg"  # フォールバック追加
                     image_base64 = base64.b64encode(uploaded_image.getvalue()).decode('utf-8')
                     image_analysis_prompt = f"""
-                    この画像を分析: data:image/jpeg;base64,{image_base64}
+                    この画像を分析: data:{mime_type};base64,{image_base64}
                     - 詳細記述: 人物の外見、服装、ポーズ、背景を忠実に記述。
                     - 出力: 記述本文のみ
                     """
@@ -190,11 +192,12 @@ if uploaded_images:
                     response_analysis = requests.post(API_URL, headers=headers, json=data_analysis)
                     if response_analysis.status_code == 200:
                         image_desc = response_analysis.json()["choices"][0]["message"]["content"].strip()
-                        # 特徴統合プロンプト
+                        # 特徴統合プロンプト - 日本人女性指定を強制追加
                         integrated_prompt = f"""
                         画像記述: {image_desc}
                         特徴: {features}
                         - 忠実に再現しつつ、特徴を統合した画像プロンプトを作成。
+                        - 必ず日本人女性として描写（典型的な日本人顔立ち: 柔らかい丸顔、アーモンド形の目、公平な肌、直黒髪など）。
                         - 言語: {'English' if image_prompt_lang == 'English' else 'Japanese'}
                         - 出力: プロンプト本文のみ
                         """
@@ -211,7 +214,7 @@ if uploaded_images:
                         else:
                             generated_prompts.append((uploaded_image.name, "統合エラー"))
                     else:
-                        generated_prompts.append((uploaded_image.name, "分析エラー"))
+                        generated_prompts.append((uploaded_image.name, f"分析エラー: {response_analysis.text[:100]}"))
 
             # 生成結果表示
             st.write("### 生成された画像プロンプト")
