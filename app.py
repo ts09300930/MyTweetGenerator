@@ -100,8 +100,8 @@ else:
 custom_rule = st.text_input("ツイートその他ルール（ツイート本文向け）", value=custom_rule if 'custom_rule' in locals() else "")
 # ツイート長スライダー（文字数ベースに変更）
 st.subheader("ツイート長設定（文字数ベース）")
-tweet_char_min = 80  # スライダー1の目安文字数
-tweet_char_max = 280 # スライダー10の目安文字数（Xの文字制限）
+tweet_char_min = 40   # ← ここを40文字に変更（スライダー1の目安）
+tweet_char_max = 280  # スライダー10はXの制限上限
 tweet_length = st.slider("ツイート長（1: 短め → 10: 長め）", 1, 10, tweet_length if 'tweet_length' in locals() else 6)
 # 文字数に変換（線形補間）
 approx_chars = tweet_char_min + (tweet_char_max - tweet_char_min) * (tweet_length - 1) / 9
