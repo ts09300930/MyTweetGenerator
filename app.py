@@ -73,7 +73,6 @@ reference = st.text_area("参考スタイル（オプション）\nXアカウン
 days = st.slider("生成日数", 1, 60, days if 'days' in locals() else 30)
 tweets_per_day = st.slider("1日あたりのツイート数", 1, 5, tweets_per_day if 'tweets_per_day' in locals() else 2)
 erotic_level = st.slider("エロ度（1: 控えめ → 10: 生々しい）", 1, 10, erotic_level if 'erotic_level' in locals() else 5)
-tweet_length = st.slider("ツイート長（1: 2行程度 → 10: 8〜10行）", 1, 10, tweet_length if 'tweet_length' in locals() else 6)
 question_frequency = st.slider("質問形式頻度（1: 稀 → 10: 多め）", 1, 10, question_frequency if 'question_frequency' in locals() else 4)
 self_deprecation_level = st.slider("自己卑下度（1: 控えめ → 10: 強い）", 1, 10, self_deprecation_level if 'self_deprecation_level' in locals() else 5)
 recruit_type = st.selectbox("募集タイプを選択", ["なし", "おじさん限定", "家出少女", "便器志願", "外国人アピール", "貧乳コンプ", "カスタム"], index=["なし", "おじさん限定", "家出少女", "便器志願", "外国人アピール", "貧乳コンプ", "カスタム"].index(recruit_type) if 'recruit_type' in locals() else 0)
@@ -96,9 +95,17 @@ poll_mode = st.checkbox("2択ポールツイートを挿入", value=poll_mode if
 if poll_mode:
     poll_interval = st.slider("ポールツイート挿入間隔（日）", 1, 10, poll_interval if 'poll_interval' in locals() else 3, help="何日ごとに1回2択ポールツイートを挿入するか")
 else:
-    poll_interval = 3  # デフォルト（使用しない場合無視）
+    poll_interval = 3 # デフォルト（使用しない場合無視）
 # ルールを分離
 custom_rule = st.text_input("ツイートその他ルール（ツイート本文向け）", value=custom_rule if 'custom_rule' in locals() else "")
+# ツイート長スライダー（文字数ベースに変更）
+st.subheader("ツイート長設定（文字数ベース）")
+tweet_char_min = 80  # スライダー1の目安文字数
+tweet_char_max = 280 # スライダー10の目安文字数（Xの文字制限）
+tweet_length = st.slider("ツイート長（1: 短め → 10: 長め）", 1, 10, tweet_length if 'tweet_length' in locals() else 6)
+# 文字数に変換（線形補間）
+approx_chars = tweet_char_min + (tweet_char_max - tweet_char_min) * (tweet_length - 1) / 9
+length_instruction = f"ツイートは約{int(approx_chars)}文字程度で生成。長すぎず短すぎず自然に。"
 # キャラ設定CSV保存機能（追記対応 + 新規項目追加）
 st.subheader("キャラ設定保存")
 char_name_save = st.text_input("保存するキャラ名（新規または既存）")
@@ -167,17 +174,8 @@ if st.button("生成開始"):
             erotic_instruction = "やや大胆なエロティック表現。指の動き、息遣い、具体的な部位の熱さなどの描写を積極的に。"
         else:
             erotic_instruction = "生々しく大胆なエロティック表現。具体的な感覚描写や行為の想像を強く含むが、センシティブ回避ルールを厳守。"
-        # ツイート長指示（1: 2行程度 → 10: 8〜10行）
-        if tweet_length <= 2:
-            length_instruction = "ツイートは極短（80〜120文字、約2行）で簡潔に。"
-        elif tweet_length <= 4:
-            length_instruction = "ツイートは短め（120〜160文字、約3〜4行）。"
-        elif tweet_length <= 7:
-            length_instruction = "ツイートは中程度の長さ（160〜200文字、約5〜6行）。"
-        elif tweet_length <= 9:
-            length_instruction = "ツイートは長め（200〜240文字、約7〜8行）で詳細に描写。"
-        else:
-            length_instruction = "ツイートは最大限長め（240〜280文字、約8〜10行）で詳細に描写。"
+        # ツイート長指示（文字数ベース）
+        length_instruction = f"ツイートは約{int(approx_chars)}文字程度で生成。長すぎず短すぎず自然に。"
         # 重複禁止 + 奥行き強化指示（大幅強化版）
         variety_instruction = """
         すべてのツイートで内容、表現、シチュエーション、言い回し、感情描写を完全に多様化せよ。
@@ -217,15 +215,15 @@ if st.button("生成開始"):
         reference_prompt = f"参考スタイル: {reference}" if reference else ""
         with st.spinner(f"{days}日分（{days * tweets_per_day}ツイート）生成中..."):
             today = datetime.date.today()
-            dates = [today + datetime.timedelta(days=i) for i in range(days)]  # 今日から未来へ
+            dates = [today + datetime.timedelta(days=i) for i in range(days)] # 今日から未来へ
             date_strings = []
             tweets = []
-            poll_days = set(range(0, days, poll_interval)) if poll_mode else set()  # ポール挿入日
+            poll_days = set(range(0, days, poll_interval)) if poll_mode else set() # ポール挿入日
             for day_idx, date in enumerate(dates):
                 date_str = date.strftime("%Y-%m-%d")
                 for j in range(tweets_per_day):
                     time_label = f"投稿{j+1}"
-                    is_poll_day = day_idx in poll_days and j == 0  # 1日目の最初のツイートをポールにする
+                    is_poll_day = day_idx in poll_days and j == 0 # 1日目の最初のツイートをポールにする
                     poll_instruction = """
                     このツイートは2択ポール形式で作成。質問文を最初に書き、1. と2. で選択肢を提示。最後に「どっち？」や「どうですか？」で締める。
                     選択肢はエロティックな2択（例: 1. アリ 2. なし。ズボン履け）。
