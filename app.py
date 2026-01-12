@@ -100,12 +100,12 @@ else:
 custom_rule = st.text_input("ツイートその他ルール（ツイート本文向け）", value=custom_rule if 'custom_rule' in locals() else "")
 # ツイート長スライダー（文字数ベースに変更）
 st.subheader("ツイート長設定（文字数ベース）")
-tweet_char_min = 20   # ← ここを40文字に変更（スライダー1の目安）
-tweet_char_max = 280  # スライダー10はXの制限上限
-tweet_length = st.slider("ツイート長（1: 短め → 10: 長め）", 1, 10, tweet_length if 'tweet_length' in locals() else 6)
+tweet_char_min = 40   # スライダー1の目安文字数（極短文）
+tweet_char_max = 280  # スライダー10の目安文字数（X上限）
+tweet_length = st.slider("ツイート長（1: 極短 → 10: 長め）", 1, 10, tweet_length if 'tweet_length' in locals() else 6)
 # 文字数に変換（線形補間）
 approx_chars = tweet_char_min + (tweet_char_max - tweet_char_min) * (tweet_length - 1) / 9
-length_instruction = f"ツイートは約{int(approx_chars)}文字程度で生成。長すぎず短すぎず自然に。"
+length_instruction = f"厳密に{int(approx_chars)}文字以内で生成。絶対に超えないこと。短く簡潔に。余計な説明は一切不要。"
 # キャラ設定CSV保存機能（追記対応 + 新規項目追加）
 st.subheader("キャラ設定保存")
 char_name_save = st.text_input("保存するキャラ名（新規または既存）")
@@ -174,8 +174,6 @@ if st.button("生成開始"):
             erotic_instruction = "やや大胆なエロティック表現。指の動き、息遣い、具体的な部位の熱さなどの描写を積極的に。"
         else:
             erotic_instruction = "生々しく大胆なエロティック表現。具体的な感覚描写や行為の想像を強く含むが、センシティブ回避ルールを厳守。"
-        # ツイート長指示（文字数ベース）
-        length_instruction = f"ツイートは約{int(approx_chars)}文字程度で生成。長すぎず短すぎず自然に。"
         # 重複禁止 + 奥行き強化指示（大幅強化版）
         variety_instruction = """
         すべてのツイートで内容、表現、シチュエーション、言い回し、感情描写を完全に多様化せよ。
@@ -246,11 +244,12 @@ if st.button("生成開始"):
                     - 出力: ツイート本文のみ
                     """
                     headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
+                    max_tokens = min(350, int(approx_chars * 1.5) + 30)  # 文字数に応じたmax_tokens制限
                     data = {
                         "model": model_name,
                         "messages": [{"role": "user", "content": prompt}],
                         "temperature": 1.1,
-                        "max_tokens": 350
+                        "max_tokens": max_tokens
                     }
                     response = requests.post(API_URL, headers=headers, json=data)
                     if response.status_code == 200:
