@@ -5,7 +5,7 @@ import requests
 import io
 import re
 
-st.title("裏垢女子ツイート生成ツール　ver1.05")
+st.title("裏垢女子ツイート生成ツール　ver1.06（改行対応）")
 
 # APIキー管理
 if "GROK_API_KEY" in st.secrets:
@@ -34,7 +34,6 @@ default_reference = """
 @siznp82913: 台湾人設定、外国人アピール、迷惑かけない強調、日本大好き表現。
 @nico_chan714: 貧乳コンプレックス、自己卑下（小さいけどいいですか？）、質問形式でエンゲージメント。
 DM単語避け、誘導は自然に。
-
 バズ特徴（過去アカウント分析に基づく）:
 - 自己卑下・弱みアピールで共感を強く誘う（例: 「私みたいなの」「貧乳でごめん」「こんな私でもいい？」）
 - 直接的な募集・呼びかけを自然に織り交ぜ（「泊めて」「友達になって」「会いませんか」「初老のおじさん全員♡ください」など）
@@ -75,7 +74,7 @@ if uploaded_csv is not None:
             custom_rule = row.get("Custom Rule", "")
             poll_mode = bool(row.get("Poll Mode", False))
             poll_interval = int(row.get("Poll Interval", 3))
-            tone_type = row.get("Tone Type", "タメ口")  # 口調タイプ
+            tone_type = row.get("Tone Type", "タメ口")
             st.success(f"{selected_char}の設定を復元しました")
     except Exception as e:
         st.error(f"CSV読み込みエラー: {e}")
@@ -102,7 +101,7 @@ row1 = st.columns(5)
 row2 = st.columns(5)
 emoji_ban = row1[0].checkbox("絵文字禁止", value=emoji_ban if 'emoji_ban' in locals() else True)
 hashtag_ban = row1[1].checkbox("ハッシュタグ禁止", value=hashtag_ban if 'hashtag_ban' in locals() else True)
-newline_allow = row1[2].checkbox("改行を適切に使用", value=newline_allow if 'newline_allow' in locals() else True)
+newline_allow = row1[2].checkbox("改行を適切に使用（推奨）", value=newline_allow if 'newline_allow' in locals() else True)
 newline_ban = row1[3].checkbox("改行完全禁止", value=newline_ban if 'newline_ban' in locals() else False)
 dm_invite = row1[4].checkbox("連絡誘導を入れる", value=dm_invite if 'dm_invite' in locals() else False)
 sensitive_avoid = row2[0].checkbox("センシティブ回避（暗示表現）", value=sensitive_avoid if 'sensitive_avoid' in locals() else True)
@@ -141,6 +140,7 @@ length_instruction = f"""
 短く切れ味の良い文で。1〜2行で終わっても構いません。
 長いと感じたら積極的に削ってください。
 """
+
 st.caption(f"現在の設定目安：約 **{target_chars}** 文字（範囲：{min_chars}〜{max_chars}文字）")
 
 # キャラ設定保存機能
@@ -219,10 +219,10 @@ if st.button("生成開始"):
         if emoji_ban: rule_text += "絵文字は一切使用禁止。"
         if hashtag_ban: rule_text += "ハッシュタグは一切使用禁止。"
         if newline_ban: rule_text += "改行は一切使用禁止。"
-        if newline_allow: rule_text += "自然で読みやすい位置に適度な改行を挿入（2-4行程度）。"
+        if newline_allow: rule_text += "自然で読みやすい位置に適度な改行を挿入（2〜4行程度）。改行を積極的に使用して視覚的に読みやすくせよ。"
         if dm_invite: rule_text += "ツイート末尾に自然な連絡誘導文を入れる（例: 「気になったら声かけてね」「リプください」「連絡待ってる」など。「DM」という単語は絶対に使わない）。"
         if sensitive_avoid: rule_text += "Xのセンシティブ判定を回避するため、直接的な性器名・行為名は一切使わず、暗示的・比喩・感覚的な表現のみで描写。"
-        if fuzzy_mode: rule_text += "センシティブな言葉は伏字化またはマイルド表現に置き換え。"
+        if fuzzy_mode: rule_text += "センシティブな言葉は伏字化（例: ま◯こ、ち◯ぽ、おっぱ◯）またはマイルド表現に置き換え。"
         if ellipsis_end: rule_text += "ツイートの末尾や文中に「。。」「...」「．．．」などを適度に使用して余韻や切なさを演出。"
         if dom_s_mode: rule_text += "ドSな口調で上から目線・言葉責め・煽りを積極的に使用。"
         rule_text += custom_rule
@@ -253,12 +253,13 @@ if st.button("生成開始"):
         妄想シーンも毎日変え、おじさんとの出会い方・場所・行為の詳細を毎回異なるものに。
         感情の起伏も日替わりで変える。
         同じフレーズ・似た状況・同じオノマトペ・同じ誘導文の繰り返しを絶対禁止。
+        改行を自然に多用して読みやすくせよ。2〜4行程度の短文構成を意識し、視覚的に切れ味の良いレイアウトにすること。
         完全に自然で流暢な日本語文にせよ。文法ミス、不自然な語尾、ぎこちない表現を絶対に避け、ネイティブが読んで違和感ゼロの文章にすること。口調に合わせて自然な語尾・接続詞を使用。
         おじさん（特に40代以上）を明確に意識した視点で書く。おじさんの視線・手・息遣い・存在を想像させる表現を必ず1つ以上入れる。日常の些細なきっかけから「止められない欲求」を具体的に描写。
         誘導文を毎回完全に異なる自然な表現にせよ。同じフレーズの繰り返しを厳禁（例: 「おじさんしかいないんです…」「今すぐ助けてください…」「こんな私を、おじさんが溶かしてくれないと…」「我慢できないから声かけて…」「垂れた胸を、おじさんの手で…」「この疼き、おじさんだけに…」「今だけは許して…」「こんな私を抱きしめて…」「溶かしてほしいんです…」「リプで温めて…」「優しく溶かしてくれませんか…」「今夜だけは…」「おじさんの胸に飛び込みたい…」など）。
         背徳感を毎回1〜2つ必ず入れる（例: 「人目があるのに我慢できない」「夜中で一人なのに疼いて」「誰かに見られそうで興奮」「こんな臭い体なのに」「秘密の場所で疼いて」など）。
         強い自己卑下を必ず織り交ぜ（例: 「こんな恥ずかしい体」「おじさんにしか見せられない私」「垂れた胸のバツイチおばさんでもいいですか」「小じわだらけの肌なのに」など）。切実な欲求と強く結びつけてむらむらを最大化。
-        出力テキストから不要な改行文字（\\n）を除去し、1つのまとまった文として生成せよ。
+        出力テキストから不要な連続改行や先頭・末尾の余分な改行を除去しつつ、自然な位置で改行を保持せよ。
         """
 
         # 質問形式指示
@@ -352,7 +353,9 @@ if st.button("生成開始"):
                     response = requests.post(API_URL, headers=headers, json=data)
                     if response.status_code == 200:
                         raw_tweet = response.json()["choices"][0]["message"]["content"].strip()
-                        tweet = raw_tweet.replace('\n', ' ')  # 不要な改行文字をスペースに置換
+                        # 改行を保持しつつ、連続改行や余分な改行を整理
+                        tweet = re.sub(r'\n{3,}', '\n\n', raw_tweet)  # 3行以上の連続改行を2行に
+                        tweet = tweet.strip()  # 先頭・末尾の空白・改行除去
                     else:
                         tweet = f"エラー: {response.text[:100]}"
 
