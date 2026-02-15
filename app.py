@@ -5,7 +5,7 @@ import requests
 import io
 import re
 
-st.title("裏垢女子ツイート生成ツール")
+st.title("裏垢女子ツイート生成ツール　ver1.04")
 
 # APIキー管理
 if "GROK_API_KEY" in st.secrets:
