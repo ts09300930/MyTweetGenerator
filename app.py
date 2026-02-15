@@ -75,6 +75,7 @@ if uploaded_csv is not None:
             custom_rule = row.get("Custom Rule", "")
             poll_mode = bool(row.get("Poll Mode", False))
             poll_interval = int(row.get("Poll Interval", 3))
+            tone_type = row.get("Tone Type", "タメ口")  # 新規追加: 口調タイプ
             st.success(f"{selected_char}の設定を復元しました")
     except Exception as e:
         st.error(f"CSV読み込みエラー: {e}")
@@ -91,6 +92,9 @@ question_frequency = st.slider("質問形式頻度（1: 稀 → 10: 多め）", 
 self_deprecation_level = st.slider("自己卑下度（1: 控えめ → 10: 強い）", 1, 10, self_deprecation_level if 'self_deprecation_level' in locals() else 5)
 recruit_type = st.selectbox("募集タイプを選択", ["なし", "おじさん限定", "家出少女", "便器志願", "外国人アピール", "貧乳コンプ", "カスタム"], index=["なし", "おじさん限定", "家出少女", "便器志願", "外国人アピール", "貧乳コンプ", "カスタム"].index(recruit_type) if 'recruit_type' in locals() else 0)
 custom_recruit = st.text_input("カスタム募集タイプを入力", value=custom_recruit if 'custom_recruit' in locals() else "") if recruit_type == "カスタム" else ""
+
+# 新規追加: 口調選択
+tone_type = st.selectbox("口調の選択", ["敬語（丁寧語）", "タメ口（カジュアル語）"], index=0 if (tone_type if 'tone_type' in locals() else "敬語（丁寧語）") == "敬語（丁寧語）" else 1)
 
 # 生成ルール
 st.subheader("生成ルール")
@@ -167,7 +171,8 @@ if st.button("現在の設定をCSVに追加保存"):
             "Dom S Mode": [dom_s_mode],
             "Custom Rule": [custom_rule],
             "Poll Mode": [poll_mode],
-            "Poll Interval": [poll_interval]
+            "Poll Interval": [poll_interval],
+            "Tone Type": [tone_type]  # 新規追加: 口調タイプ
         }
         df_new = pd.DataFrame(new_data)
         csv_new = df_new.to_csv(index=False).encode('utf-8')
@@ -223,6 +228,12 @@ if st.button("生成開始"):
         if dom_s_mode: rule_text += "ドSな口調で上から目線・言葉責め・煽りを積極的に使用（例: 「おじさんならどうするの？」「満足させられる人だけ来て」など）。"
         rule_text += custom_rule
 
+        # 新規追加: 口調指示
+        if tone_type == "敬語（丁寧語）":
+            tone_instruction = "敬語（丁寧語）を使用し、です・ます調で丁寧に表現せよ。"
+        else:
+            tone_instruction = "タメ口（カジュアル語）を使用し、親しみやすい口語体で表現せよ。"
+
         # エロ度指示
         if erotic_level <= 2:
             erotic_instruction = "エロティックさは極めて控えめ。性的表現は一切避け、孤独感や雰囲気の描写のみ。"
@@ -235,13 +246,14 @@ if st.button("生成開始"):
         else:
             erotic_instruction = "生々しく大胆なエロティック表現。具体的な感覚描写や行為の想像を強く含むが、センシティブ回避ルールを厳守。"
 
-        # 多様性・奥行き指示
+        # 多様性・奥行き指示（意味明確化を追加）
         variety_instruction = """
         すべてのツイートで内容、表現、シチュエーション、言い回し、感情描写を完全に多様化せよ。
         毎日異なる具体的な日常イベント（例: 専門学校の授業、バイト先の出来事、通勤電車、コンビニ買い物、SNS閲覧、友人会話、テレビ視聴、散歩、料理など）を1つ必ず入れ、それきっかけでムラムラする流れにする。
         妄想シーンも毎日変え、おじさんとの出会い方（電車、コンビニ、夢の中、SNSリプ、街角、カフェ、病院など）、場所（部屋、ホテル、車内、公園、屋上など）、行為の詳細を毎回異なるものに。
         感情の起伏も変え（期待、苛立ち、後悔、罪悪感、興奮、切なさ、焦燥、陶酔など日替わり）。
         同じフレーズ・似た状況の繰り返しを絶対禁止。
+        自然で意味の通る日本語文を作成せよ。文法を正しくし、論理的につじつまが合う内容に。読み手に簡単に理解できるように。日常イベントと感情のつながりを明確に描写。曖昧な表現を避け、具体的な感覚や状況を簡潔に。
         """
 
         # 質問形式指示
@@ -307,6 +319,7 @@ if st.button("生成開始"):
                     - 募集タイプ: {recruit_instruction}
                     - 日付考慮: {date_str}頃（{time_label}）
                     - ルール: {rule_text}
+                    - 口調: {tone_instruction}
                     - エロ度: {erotic_instruction}
                     - 質問形式: {question_instruction}
                     - 自己卑下: {deprecation_instruction}
